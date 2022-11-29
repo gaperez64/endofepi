@@ -1,0 +1,349 @@
+\section{Preliminaries}
+We write $\mathbb{N}$ to denote the set of all natural numbers, including zero.
+
+\section{Compartment Models}
+We consider a time-based discretization of the classical SIR compartment models. Let us fix a \emph{population size} of $P \in \mathbb{N}$.
+
+\begin{definition}[SIR system]
+    A SIR system is a pair $(Q,\rightarrow)$ where the following hold.
+    \begin{itemize}
+        \item The set $Q$ of \emph{states} of the system is $\{\vec{v} \in \mathbb{N}^3 : \norm{\vec{v}}{1} = P\}$.
+        \item The \emph{transition relation} ${}\rightarrow{} \subseteq Q \times Q$ is such that $(s_1,i_1,r_1) \rightarrow (s_2,i_2,r_2)$ if and only if there exist $\delta_I,\delta_R \in \mathbb{N}$ such that:
+        \begin{enumerate}
+            \item $0 \leq \delta_I \leq s_1$,
+            \item $0 \leq \delta_R \leq i_1$,
+            \item $s_2 = s_1 - \delta_I$,
+            \item $i_2 = i_1 + \delta_I - \delta_R$, and
+            \item $r_2 = r_1 + \delta_R$.
+        \end{enumerate}
+    \end{itemize}
+\end{definition}
+Note that, for any state $\vec{p} \in Q$, the cardinality of the set $\{\vec{q} \in Q \mid \vec{p} \rightarrow \vec{q}\}$ of its successors is \emph{not} constant with respect to $P$.
+
+In fact, the ``branching degree'' of the SIR system is so large that any \emph{reachable state} is reachable in at most two transitions. Some definitions are in order.
+
+\subsection{Reachability}
+A \emph{run} of the SIR system is a finite sequence of states $\vec{q}_1 \vec{q}_2 \dots \vec{q}_n$ such that $\vec{q}_i \rightarrow \vec{q}_{i+1}$ for all $1 \leq i < n$. We say that \emph{$\vec{t}$ is reachable from $\vec{p}$} and write $\vec{p} \xrightarrow{*} \vec{t}$ if there exists a run with $\vec{q}_1 = \vec{p}$ and $\vec{q}_n = \vec{t}$.
+
+\begin{claim}
+    Consider two states $(s_1,i_1,r_1),(s_2,i_2,r_2) \in Q$. The following are equivalent.
+    \begin{itemize}
+        \item $(s_1,i_1,r_1) \xrightarrow{*} (s_2,i_2,r_2)$
+        \item There exists $\vec{q} \in Q$ such that $(s_1,i_1,r_1) \rightarrow \vec{q}$ and $\vec{q} \rightarrow (s_2,i_2,r_2)$.
+        \item We have $s_2 \leq s_1$ and $r_1 \leq r_2$.
+    \end{itemize}
+\end{claim}
+As an immediate consequence we have the following.
+\begin{claim}
+    The reachability problem for SIR systems is decidable in polynomial time.
+\end{claim}
+
+\section{Ordering SIR States}
+Presently, we study a partial order among states of a SIR system. It is our intention to use this partial order to ``give some structure'' to the set of successors of each state.
+
+\begin{definition}
+    For all $m \in \mathbb{N}$, we write $(s_1,i_1,r_1) \preceq_m (s_2,i_2,r_2)$ if and only if all of the following hold.
+    \begin{itemize}
+        \item $s_2 \leq s_1 \leq P - m$
+        %\item $i_2 - i_1 \leq s_1 - s_2$ We can drop this out, since it is implied by the third property
+        \item $r_1 \leq r_2 \leq m$
+    \end{itemize}
+\end{definition}
+
+\begin{lemma}
+    For all $m \in \mathbb{N}$, the relation ${} \preceq_m {}$ is a partial order on $Q$.
+\end{lemma}
+
+\begin{lemma}
+    Let $m \in \mathbb{N}$ and $(s,i,r),\vec{p},\vec{q} \in Q$ with $i + r \geq m$. If $(s,i,r) \rightarrow \vec{p}$ and $\vec{p} \preceq_m \vec{q}$ then $(s,i,r) \rightarrow \vec{q}$.
+\end{lemma}
+\begin{proof}
+In the following, let $\vec{p}=(s_p,i_p,r_p)$ and $\vec{q}=(s_q,i_q,r_q)$. The order relation between $\vec{p}$ and $\vec{q}$ implies $s_q\leq s_p$, and therefore there exists $n_s\in \mathbb{N}$ such that $s_p=s_q+n_s$. On the other hand, the relation $(s,i,r) \rightarrow \vec{p}$ implies $s_p=s-\delta_I$, with $0 \leq \delta_I \leq s$. Thus, the expression $s_q=s-(\delta_I+n_s)$ is obtained. Now, suppose that $\delta_I' \coloneqq \delta_I+n_s>s$. This results in $s_q<0$, which leads to a contradiction. 
+
+Similarly, we construct $\delta_R'\coloneqq \delta_R+n_r$, such that $r_q=r+\delta_R'$, with $r_p=r+\delta_R$ and $r_q=r_p+n_r$, for some $0 \leq \delta_R \leq i$ and $n_r\in \mathbb{N}$.
+
+Both $\delta_I', \delta_R'\geq 0$, by construction.
+
+By the conservation property in $Q$, the following holds
+\begin{equation*}
+\begin{split}
+i_q-i&=(P-s_q-r_q)-(P-s-r) \\
+&=s-s_q+r-r_q \\
+&=\delta_I'-\delta_R'.
+\end{split}
+\end{equation*}
+
+From the above equation we get the following.
+\begin{align*}
+\delta_R' = {} & i + \delta'_I - i_q\\
+{}={} & i + \delta_I + n_r - i_q & \text{by def. of } \delta'_I\\
+{}={} & i + \delta_I + (s_p - s_q) - i_q & \text{by choice of } n_r\\
+{}={} & i + \delta_I + s_p - (s_q + i_q)\\
+{}={} & i + \delta_I + s_p - (P - r_q) & \text{conservation of pop.}\\
+{}={} & i + s - (P - r_q) & \text{def. of } \delta_I\\
+{}={} & i + s + r_q - P\\
+{}\leq{} & i + s + m - P & \text{since } r_q \leq m\\
+\end{align*}
+Now, since $i + r = P - s \geq m$, the last inequality implies $\delta'_R \leq i$ as required.
+\end{proof}
+
+
+\subsection{The structure of successors}
+\todo[inline]{Review claims below as some definitions have changed!}
+Based on the partial order we have introduced above, we will now partition $Q$ based on fixed values of $s + r$ in $(s,i,r)$. As we will see, this allows us to find ``minimal successors'' for a state.
+
+For $m \in \mathbb{N}$, in the sequel we write $Q_{=m}$ to denote the set $\{(s,i,r) \in Q \mid s + r = m\}$.
+
+\begin{claim}
+    Let $m \leq n \leq P$ and $\vec{p} \in Q_{=m}$. Then, there exists $\vec{q} \in Q_{=n}$ such that:
+    \begin{itemize}
+        \item $\vec{p} \rightarrow \vec{q}$ and
+        \item for all $\vec{q}' \in Q_{=n}$ with $\vec{p} \rightarrow \vec{q}'$ we have
+    $\vec{q} \preceq_m \vec{q}'$.
+    \end{itemize} 
+\end{claim}
+
+\begin{proof}
+%rephrase it in terms of Zorn´s lemma
+Suppose there is no minimal $q\in Q_{=n}$. Let $s\in Q_{=n}$ such that $\vec{p} \rightarrow \vec{s}$, therefore there exists a sequence $\{q_i\}_I$ in $Q$ such that $q_1\preceq_m s$ and $q_{i+1}\preceq_m q_i$ for $i \in I$, and thus there exists $m'\in I$ such that $q_k\preceq_m (0,0,0)$ for $k>m'$. %The subset relations $\{ q \in Q \mid \vec{p} \rightarrow \vec{q} \}\subset Q \subset \mathbb{N}^3$ finish the proof.     
+
+
+
+\end{proof}
+
+\begin{claim}
+    Let $\ell \leq m \leq n \leq P$ and $\vec{p} \in Q_{=\ell}$. Then, for all $\vec{q} \in Q_{=n}$ such that $\vec{p} \rightarrow \vec{q}$ there exists $\vec{q}' \in Q_{=m}$ such that $\vec{p} \rightarrow \vec{q}'$ and $\vec{q}' \preceq_\ell \vec{q}$.
+\end{claim}
+
+\begin{proof}
+
+
+To prove the existence of $\vec{q}'=(s_{q'},i_{q'},r_{q'})$ (from the claim), we first notice a couple of relations following from the conservation property in $Q$. These are
+
+\begin{equation}
+\label{eq:conservation}
+    s_a+i_a+r_a=s_{b}+i_{b}+r_{b}
+\end{equation}
+
+and
+
+\begin{equation}
+\label{eq:vueltaalatortilla}
+    i_a+r_a=P-s_a,
+\end{equation}
+
+for any $a,b \in Q$.
+
+
+Let $s_{q'}=s_q+n_s$, $i_{q'}=i_q+n_i$ and $r_{q'}=r_q-n_r$. In the rest of the proof, we will define the values of $n_s$, $n_i$ and $n_r$, one by one.
+
+%Case 1) If $l=n$. It is all straightforward.
+
+%Case 2) If $l\leq m \leq n$ then $P-n\leq P-m \leq P-l$, and thus $s_q\leq s'\leq s_p$ with $s'= P-m$. Let $q'$ such that $s_{q'}=s'$, therefore $s_{q'}=s_q+n_s$ for $n_s\in \mathbb{N}$, and  $\vec{p} \rightarrow \vec{q}$ implies $s_{q'}=s_p- \delta_I+n_s$. 
+
+
+Starting with $n_s$, we observe that $P-n\leq P-m \leq P-l$ and \eqref{eq:vueltaalatortilla} together imply $s_q\leq P-m\leq s_p$. Let $s_{q'}=P-m$, then the last inequalities imply $s_{q'}=s_q+n_s$, for $n_s\in \mathbb{N}$. Note that this leads to the alternative definition $n_s=n-m$. On the other hand, the relation $\vec{p} \rightarrow \vec{q}$ implies that $s_{q}=s_p- \delta_I$, and thus $s_{q'}=s_p- \delta_I+n_s$, for $0 \leq \delta_I \leq s_p$. To check that $\delta_I'=\delta_I-n_s$ lies between zero and $s_p$, we observe that $\delta_I'\leq \delta_I\leq s_p$, by construction. Now, suppose that $\delta_I'<0$. This implies that $s_{q'}>s_p$, leading to a contradiction, since $s_{q'}=P-m\leq s_p$. 
+%equivalent to $i_p+r_p> i_{q'}+r_{q'}$, by \eqref{eq:conservation}. However, this last relation holds if and only if $m<l$, leading to a contradiction.
+
+
+%Now, figuring out the values for $i_{q'}$ and $r_{q'}$: 
+
+The value $r_{q'}=r_{q}-n_r$ is proposed, with $0\leq n_r$. Since $\vec{p} \rightarrow \vec{q}$, the equality $r_{q'}=r_{p}+\delta_R-n_r$ is obtained. Let $\delta_R'=\delta_R-n_r$, then the relation $0\leq \delta_R'\leq i_p$ follows from
+$0 \leq \delta_R \leq i_p$, for $n_r\in \{0, \ldots, \delta_R\}$. We also note that $r_q = r_p+\delta_R \leq r_p+i_p =\ell$, and thus $r_{q'}\leq r_{q}\leq \ell$.
+
+
+The value for $i_{q'}$ can then be obtained by observing \eqref{eq:conservation}: $n_i$ needs to satisfy $n_i=n_r-n_s$. The last requirement for the transition $\vec{p} \rightarrow \vec{q'}$ to occur follows thereafter:
+
+\begin{equation*}
+\begin{split}
+i_{q'}&=i_q+n_i \\
+&=i_p+\delta_I-\delta_R+n_r-n_s \\
+&=i_p+\delta_I'-\delta_R'.
+\end{split}
+\end{equation*}
+
+%Finally, we note that $r_q\leq l$, as $\vec{p} \rightarrow \vec{q}$ implies that for some $\delta_R$ with $0 \leq \delta_R \leq i_p$, the following holds
+
+
+%\begin{align*}
+%r_q = {} & r_p+\delta_R \\
+%{}\leq{} & r_p+i_p \\
+%{}={} & \ell & \text{since } \vec{p} \in Q_{=\ell}\\
+%\end{align*}
+\end{proof}
+
+
+The crux of our improvement on \Cref{alg:simple} is the following recurrence
+relations.
+\begin{lemma}\label{lem:recrel}
+  Let $\vec{m},\vec{n}$ be states such that $n_1 \leq m_1$ and $m_3 \leq n_3 \leq m_2 + m_3$.
+  \begin{enumerate}[label=(\roman*)]
+      \item If, additionally,
+        $m_3 < n_3$ and
+        $0 < m_1,m_2$, then:
+      \[ P(\vec{m},\vec{n}) = \alpha(\vec{m},n_3) P(m_1,m_2-1,m_3+1,\vec{n}) \]
+      where
+      \(
+        \alpha(\vec{m},n_3) \coloneqq m_2
+        (1-\exp(-h\gamma)) / (m_2-n_1-n_2+m_1).
+      \) \label{itm:alpha}
+      \item If, instead, $n_1 < m_1$ and $m_3 = n_3$, then:
+      \[ P(\vec{m},\vec{n}) = \kappa(\vec{m},n_1) P(m_1-1,m_2+1,m_3,\vec{n}) \]
+      where,
+      \(
+        \kappa(\vec{m},n_1) \coloneqq \frac{m_1\exp(h\gamma) (1-\exp(-h\beta (m_2+1)))}{(m_1-n_1)\exp(-h\beta n_1)}.
+      \) \label{itm:kappa}
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  Note that $P(\vec{m},\vec{n}), P(m_1,m_2-1,m_3+1,\vec{n})> 0$ by
+  \Cref{lem:succ} and our assumptions for the first part of the claim, respectively.
+  We first consider the binomial coefficients of \eqref{eqn:finalform}. Note
+  that the following equality holds. 
+  \[
+    \binom{m_1}{n_1} \binom{m_2}{n_1+n_2-m_1} =
+    \frac{m_2}{(m_2-n_1-n_2+m_1)} \binom{m_1}{n_1}
+    \binom{m_2-1}{n_1+n_2-m_1}
+  \]
+  Importantly, since we have assumed that $m_3 < n_3$, we have that $n_1 + n_2 < m_1 + m_2$ and the denominator of the first fraction on the r.h.s. is not $0$.
+  On the other hand, for the terms involving probabilities, it suffices to
+  study those from the $(\mathbb{P}(A_2 \mid A_1))$ factor of
+  \eqref{eqn:finalform} because the ones from $(\mathbb{P}(A_1))$ do not depend on $m_2$ or $m_3$. Observe that the following is true.
+  \begin{align*}
+    & (1 - \exp(-h\gamma))^{(m_2-n_1-n_2+m_1)}
+    \exp(h\gamma)^{(n_1+n_2-m_1)}\\
+    {}={} &(1-\exp(-h\gamma)) (1 - \exp(-h\gamma))^{(m_2-n_1-n_2+m_1-1)} \exp(h\gamma)^{(n_1+n_2-m_1)}
+  \end{align*}
+  From the above it follows that the first equality holds.
+  
+  For the second item, we have that $P(m_1-1,m_2+1,m_3,\vec{n}),P(\vec{m},\vec{n}) > 0$ again by \Cref{lem:succ} and our assumptions. Once more, we focus on the binomial coefficients of \eqref{eqn:finalform} and observe that the following holds.
+  \begin{align*}
+    &\binom{m_1}{n_1} \binom{m_2}{n_1+n_2-m_1}\\
+    {}={} & 
+    \frac{m_1(n_1+n_2-m_1+1)}{(m_1-n_1) (m_2+1)}
+    \binom{m_1-1}{n_1} \binom{m_2+1}{n_1+n_2-m_1+1}\\
+    {}={} &
+    \frac{m_1}{(m_1-n_1)}
+    \binom{m_1-1}{n_1} \binom{m_2+1}{n_1+n_2-m_1+1}
+  \end{align*}
+  The last equality above follows from the fact that our assumption $m_3=n_3$ implies $m_1+m_2 = n_1+n_2$ and thus $n_1+n_2-m_1+1=m_2+1$. We observe that the denominator of the fraction in the last line is guaranteed to be nonzero since $n_1 < m_1$ by assumption. To conclude, we need to consider the terms involving exponentials, i.e. the probabilities. We consider those from $\mathbb{P}(A_1)$ first.
+  \begin{align*}
+    & \exp(-h\beta m_2)^{n_1} (1- \exp(-h\beta m_2))^{m_1-n_1} = {}\\
+    & \frac{1-\exp(-h\beta (m_2+1))}{\exp(-h\beta n_1)} \exp(-h\beta (m_2+1))^{n_1} (1- \exp(-h\beta (m_2+1)))^{m_1-n_1-1}
+  \end{align*}
+  Now, we turn to the probabilities from $\mathbb{P}(A_2 \mid A_1)$.
+  \begin{align*}
+    & (1-\exp(-h\gamma))^{m_2-n_1-n_2+m_1}\exp(-h\gamma)^{n_1+n_2-m_1}\\
+    {}={} & \frac{1}{\exp(-h\gamma)} (1 - \exp(-h\gamma))^{m_2-n_1-n_2+m_1} \exp(-h\gamma)^{n_1+n_2-m_1+1)}
+  \end{align*}
+  This concludes the proof of the second equality.\qed
+\end{proof}
+
+For all states $\vec{m}$ and all $m_3 \leq n_3 \leq m_3+m_2$, define $S_{n_3}(\vec{m})$ as follows:
+\[
+    S_{n_3}(\vec{m}) \coloneqq \sum_{n_1=0}^{m_1} P(\vec{m},\vec{n})\Ex^{\vec{n}}[\htime],
+\]
+where $\vec{n} = (n_1,N-n_1-n_3,n_3)$. Note that the $S_{n_3}(\vec{m})$ correspond to the partial sums computed in lines \ref{loc:inner}--\ref{loc:endinner} of \Cref{alg:simple}. The following result provides us with a way to avoid computing those partial sums explicitly, thus saving us one for-loop.
+
+\begin{lemma}\label{lem:sn3-props}
+    Let $\vec{m}$ be a state and $n_3 \in \mathbb{N}$ be such that $m_3 \leq n_3 \leq m_3 + m_2$.
+    If $1 < m_2$ and $m_3 < n_3$ then
+    \[
+        S_{n_3}(\vec{m}) = \alpha(\vec{m},n_3) S_{n_3}(m_1,m_2-1,m_3+1),
+      \]
+    where $\vec{n} = (n_1,N-n_1-n_3,n_3)$.
+\end{lemma}
+\begin{proof}
+    Let us write $\vec{m'} = (m_1,m_2-1,m_3+1)$. By definition, $S_{n_3}(\vec{m'})=\sum_{n_1=0}^{m_1} P(\vec{m'},\vec{n}) \Ex^{\vec{n}}[\htime]$. The latter holds if and only if the following does too.
+    \[
+        \alpha(\vec{m},n_3) S_{n_3}(\vec{m'}) = \alpha(\vec{m},n_3) \sum_{n_1=0}^{m_1} P(m_1,m_2-1,m_3+1,\vec{n}) \Ex^{\vec{n}}[\htime]
+    \]
+    Now, since $0<m_2-1$ and $m_3 < n_3 \leq m_2 + m_3$ by assumption and $n_1 \leq m_1$ for all summands, \Cref{lem:recrel} \cref{itm:alpha} tells us the above is true if and only if:
+    \[
+        \alpha(\vec{m},n_3) S_{n_3}(\vec{m'}) = \sum_{n_1=0}^{m_1} P(\vec{m},\vec{n}) \Ex^{\vec{n}}[\htime].
+    \]
+    Observe that the right-hand side of the above equality is, by definition,
+    equal to $S_{n_3}(\vec{m})$.\qed
+\end{proof}
+
+
+\begin{algorithm}[t]
+    \caption{A more efficient algorithm to compute $\Ex^{\vec{m}}[\htime]$ from all $\vec{m}$}
+    \label{alg:efficient}
+    \begin{algorithmic}[1]
+        \For{$m_1=0,\dots,N$}
+            \State $\Val(\vec{m}) \gets 0$, with $\vec{m} = (m_1,0,N-m_1)$
+        \EndFor
+        \For{$M = 1, \dots, N$} \label{loc:choosem-start}
+            \For{$m_2 = M, \dots, 1$} \Comment{Note the reversed order}
+                \State $\vec{m} \gets (M - m_2,m_2,N-M)$
+                \State $X(\vec{m},m_3) \gets 0$ \label{loc:mm3-start} \Comment{Compute $S_{m_3}(\vec{m})-P(\vec{m},\vec{m})\Ex^{\vec{m}}[\htime]$}
+                \State $p \gets P(\vec{m},\vec{n})$, with $\vec{n} = (0,M,m_3)$
+                \For{$n_1=0, \dots,m_1-1$}
+                    \State $X(\vec{m},m_3) \gets X(\vec{m},m_3) + p \cdot \Val(\vec{n})$, with $\vec{n} = (n_1,M-n_1,m_3)$
+                    \State $p \gets p \cdot \kappa(\vec{m},n_1+1)$
+                \EndFor \label{loc:mm3-end}
+                \State $X(\vec{m},m_3+1) \gets 0$ \label{loc:mm31-start} \Comment{Compute $S_{m_3+1}(\vec{m})$}
+                \State $t \gets P(\vec{m},\vec{n})$, with $\vec{n} = (0,M,m_3 + 1)$
+                \For{$n_1 = 0, \dots, m_1$}
+                    \State $\vec{n} \gets (n_1,N-n_1-m_3-1,m_3+1)$
+                    \State $X(\vec{m},m_3+1) \gets X(\vec{m},m_3+1) + t \cdot \Val(\vec{n})$
+                    \State $t \gets t \cdot \kappa(\vec{m},n_1 + 1)$
+                \EndFor \label{loc:mm31-end}
+                \State  $\Val(\vec{m}) \gets 1 + X(\vec{m},m_3) + X(\vec{m},m_3+1)$ \label{loc:val-start} \Comment{Compute $\Val(\vec{m})$}
+                \For{$n_3 = m_3 + 2, \dots, m_2+m_3$}
+                    \State $X(\vec{m},n_3) \gets \alpha(\vec{m},n_3) X(\vec{m'},n_3)$, with $\vec{m'} = (m_1,m_2-1,m_3+1)$
+                    \State $\Val(\vec{m}) \gets \Val(\vec{m}) + X(\vec{m},n_3)$
+                \EndFor
+                \State $\Val(\vec{m}) \gets \Val(\vec{m}) / (1-p)$ \label{loc:val-end}
+                \State $X(\vec{m},m_3) \gets X(\vec{m},m_3) + p \cdot \Val(\vec{m})$ \label{loc:fixmm3}
+            \EndFor
+        \EndFor \label{loc:choosem-end}
+    \end{algorithmic}
+\end{algorithm}
+
+
+As with \Cref{alg:simple}, we observe that \Cref{alg:efficient} clearly terminates because all for-loops are bounded and there are no jump statements in the code. Regarding the time complexity of \Cref{alg:efficient}, however, we now only ever nest at most $3$ for-loops and $P(\vec{m},\vec{n})$ is never used (i.e. computed) in an innermost loop.
+\begin{theorem}[Complexity]
+    The worst-case time complexity of \Cref{alg:efficient} is $O(N^3)$.
+\end{theorem}
+
+For correctness of \Cref{alg:efficient}, the argument is similar to the one used for \Cref{alg:simple}. Additionally, one needs to take care that the partial sums must be defined before they are being used.
+\begin{theorem}[Correctess]
+    Let $\Val(\cdot)$ be as computed by \Cref{alg:efficient}. Then, $\Val(\vec{m}) = \Ex^{\vec{m}}[\htime]$ for all states $\vec{m}$.
+\end{theorem}
+\begin{proof}
+    Note that the order in which the states are traversed in lines
+    \ref{loc:choosem-start}--\ref{loc:choosem-end} makes it so that any state
+    $\vec{m''}$ with $m''_1+m''_2 \leq m_1 + m_2$, with the inequality being
+    strict or with equality and $m_2'' < m_2$, was already treated before the
+    current $\vec{m}$. (When $m_1 + m_2 = 1$, this holds due to the
+    initialization loop.) This already means that when computing
+    $X(\vec{m},m_3)$ and $X(\vec{m},m_3+1)$ in lines
+    \ref{loc:mm3-start}--\ref{loc:mm3-end} and
+    \ref{loc:mm31-start}--\ref{loc:mm31-end}, respectively, the value of the
+    $\Val(\vec{n})$ is defined when it is used. Furthermore, by
+    \Cref{lem:recrel} \cref{itm:kappa}, we have that:
+    \begin{align*}
+      X(\vec{m},m_3) ={} & S_{m_3}(\vec{m}) - P(\vec{m},\vec{m})
+      \Ex^{\vec{m}}[\htime],\\
+      X(\vec{m},m_3+1) = {} & S_{m_3+1}(\vec{m}), \text{ and}\\
+      p = {} & P(\vec{m},\vec{m})
+    \end{align*}
+    after line \ref{loc:mm31-end}.
+
+    Now, again because of the order in which states are treated, we note that
+    in lines \ref{loc:val-start}--\ref{loc:val-end}, any $X(\vec{m'},n_3)$ for
+    $\vec{m'} = (m_1,m_2-1,m_3+1)$ and all $m_2 + 2 \leq n_3 \leq m_2 + m_3 =
+    m'_2 + m'_3$ have already been computed (and set to $S_{n_3}(\vec{m'})$)
+    in previous iterations of the loop (or not needed at all, as is the case
+    in the first iteration).  Furthermore, \Cref{lem:sn3-props} tells us that:
+    \begin{align*}
+      X(\vec{m},n_3) = {} & S_{n_3}(\vec{m}), \text{ for all } m_3 + 2 \leq n_3 \leq m_3 + m_2,\\
+      \text{hence } \Val(\vec{x}) = {} & \sum_{n_3=m_3}^{m_3+m_2} S_{n_3}(\vec{m}) -
+      \Ex^{\vec{m}}[\htime]
+    \end{align*}
+    just before line \ref{loc:val-end}. Hence, $\Val(\vec{x}) =
+    \Ex^{\vec{m}}[\htime]$ after that and $X(\vec{m},m_3) = S_{m_3}(\vec{m})$
+    after the line that follows.\qed
+\end{proof}

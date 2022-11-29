@@ -1,0 +1,861 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{yfonts}
+\usepackage{todonotes}
+
+\setlist{nosep}
+
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Algorithmic Analysis of SEIR MDPs}
+\author{Alejandro and Guillermo A. P\'erez}
+\date{November 2021}
+
+\begin{document}
+
+\maketitle
+
+\section{What We Think We Are Doing}
+\begin{itemize}
+    \item We give a concrete Markov chain for a SEIR model used for COVID. This is paired with a simple code artifact.
+    \item We link the resulting chain with probabilistic VASS (that preserve a total vector sum).
+    \item We would like to understand the effect of the sequentiality assumption.
+    \item We formalize properties of interest for epidemiologists. Additionally we specialize classical verification algorithms for these properties and described model.
+\end{itemize}
+
+
+\section{Preliminaries}
+We present below the main mathematical details of the deterministic-time stochastic model proposed in~\cite{abrams21}.
+
+Let $K \in \mathbb{N}$ with $K > 0$ and $L = 6$. We define a sequence of random variable vectors $\vec{S}(t), \vec{E}(t), \vec{R}(t), \vec{D}(t) \in \mathbb{N}^K$ and random variable matrices $\vec{I}(t) \in \mathbb{N}^{L \times K}$ inductively as follows. Assuming the initial values for $t = 0$ are given, then for all $t \in \mathbb{N}$ we set:
+\begin{align}
+\label{eq:iteration}
+    \vec{S}(t+1) = {} & \vec{S}(t) - \vec{E}'\\
+    \vec{E}(t+1) = {} & \vec{E}(t) + \vec{E}' - \vec{I}'_1\\
+    \vec{I}(t+1) = {} & \vec{I}(t) + \vec{I}' - 
+    \begin{pmatrix}
+    \vec{I}'_2 + \vec{I}'_3\\
+    \vec{R}'_1\\
+    \vec{I}'_4 + \vec{R}'_2\\
+    \vec{I}'_5 + \vec{I}'_6\\
+    \vec{D}'_1 + \vec{R}'_3\\
+    \vec{D}'_2 + \vec{R}'_4
+    \end{pmatrix}\\
+    \vec{D}(t+1) = {} & \vec{D}(t) + \vec{D}'_1 + \vec{D}'_2\\
+    \vec{R}(t+1) = {} & \vec{R}(t) + \vec{R}'_1 + \vec{R}'_2 + \vec{R}'_3 + \vec{R}'_4,
+\end{align}
+with all primed variables consisting of entries that are sampled from binomial distributions. We first state the parameters of the distributions for all those whose probabilities are stationary (i.e. constant for all $t$), then we turn to $\vec{E}'$.
+
+{\color{red} Hay que verificar que las distribuciones tengan sentido: e.g. que no puedas dejar poblaciones negatives, no me parece obvio que eso es respetado por las ecuaciones en el paper de Abrams et al.}
+
+%In table \ref{tab:my_label} we observe the compartmental division of the population $N$, where we notice that the infectious individuals have been further divided into classes I etc
+
+
+
+
+
+
+\begin{remark}
+    For all $t,t' \in \mathbb{N}$ the following holds.
+    \[
+        \vec{S}(t) + \vec{E}(t) + \vec{R}(t) + \vec{D}(t) + \sum_{\ell = 1}^L (\vec{I}(t))_\ell = \vec{S}(t') + \vec{E}(t') + \vec{R}(t') + \vec{D}(t') + \sum_{\ell = 1}^L (\vec{I}(t'))_\ell
+    \]
+    We call this value the \emph{total population}.
+\end{remark}
+
+\begin{table}[t]
+    \centering
+    \begin{tabular}{c | c | c}
+        Variable & Intended semantics & Type\\
+        \hline
+        $\vec{S}(t)$ & Susceptible population at time $t$ (per age group) & ${} \in \mathbb{N}^K$\\
+        $\vec{E}(t)$ & Exposed population at time $t$ & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_1$ & Infected and presymptomatic population at time $t$ & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_2$ & Infected and asymptomatic population & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_3$ & Infected and with mild symptoms & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_4$ & Infected, with severe symptoms & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_5$ & Infected and hospitalized & ${} \in \mathbb{N}^K$\\
+        $(\vec{I}(t))_6$ & Infected and in the ICU & ${} \in \mathbb{N}^K$\\
+        $\vec{I}(t)$ & Matrix with all the infected-population vectors & ${} \in \mathbb{N}^{L \times K}$\\
+        $\vec{R}(t)$ & Recovered population at time $t$ & ${} \in \mathbb{N}^K$\\
+        $\vec{D}(t)$ & Deceased population at time $t$ & ${} \in \mathbb{N}^K$
+    \end{tabular}
+    \caption{Summary of notation used in this work}
+    \label{tab:my_label}
+\end{table}
+
+The parameters are obtained from the set of ODEs in section $2.1$ of~\cite{abrams21}, where the modelling assumption state that with the exception of compartments $S$, $D$, and $R$, the waiting times within compartments are all exponentially distributed, e.g. the latency period (of an individual in $E$) follows an exponential distribution with a constant parameter $\gamma$, and $1-e^{-\gamma x}$ (the cumulative density function) will give the probability that an exposed individual will have left compartment $E$ by time $x>0$. {\color{red} Ésta última oración es más bien una corta explicación de cómo obtienen los parámatros de las binomiales, falta quizas explicar el parametro beta*S*I, resultante de suponer que la poblacion interactua siguiendo un proceso de Poisson}. With this in mind, we obtain the primed values in ~\ref{eq:iteration} by drawing realizations from the following binomial distributions:
+
+%{\color{red} To put the binomial parameters}
+\begin{equation} \label{eq:ownbinomials}
+\begin{split}
+    \vec{E}_{t+h}^{new}(k)&\sim B(\vec{S}_t(k),p_t^*(k)), \\
+    \vec{I}_{presym,t+h}^{new}(k)&\sim B(\vec{E}_t(k),\quad p_1=1-\exp(-h\gamma)), \\
+    \vec{I}_{asym,t+h}^{new}(k)&\sim B(\vec{I}_{presym,t}(k),\quad p_2=1-\exp(-hp(k)\theta)), \\
+    \vec{I}_{mild,t+h}^{new}(k)&\sim B(\vec{I}_{presym,t}(k)-\vec{I}_{asym,t+h}^{new}(k),\quad p_3=1-\exp(-h(1-p(k))\theta)), \\
+    \vec{I}_{sev,t+h}^{new}(k)&\sim B(\vec{I}_{mild,t}(k),\quad p_4=1-\exp(-h\psi(k))), \\
+    \vec{I}_{hosp,t+h}^{new}(k)&\sim B(\vec{I}_{sev,t}(k),\quad p_5=1-\exp(-h\phi_1(k)\omega(k))), \\
+    \vec{I}_{icu,t+h}^{new}(k)&\sim B(\vec{I}_{sev,t}(k)-\vec{I}_{hosp,t+h}^{new}(k),\quad p_6=1-\exp(-h(1-\phi_1(k))\omega(k))), \\
+    \vec{D}_{hosp,t+h}^{new}(k)&\sim B(\vec{I}_{hosp,t}(k)-\vec{R}_{hosp,t+h}^{new}(k),\quad p_7=1-\exp(-h\tau_1(k))), \\
+    \vec{D}_{icu,t+h}^{new}(k)&\sim B(\vec{I}_{icu,t}(k)-\vec{R}_{icu,t+h}^{new}(k),\quad p_8=1-\exp(-h\tau_2(k))), \\
+    \vec{R}_{asym,t+h}^{new}(k)&\sim B(\vec{I}_{asym,t}(k),\quad p_9=1-\exp(-h\delta_1)), \\
+    \vec{R}_{mild,t+h}^{new}(k)&\sim B(\vec{I}_{mild,t}(k)-\vec{I}_{sev,t+h}^{new}(k),\quad p_{10}=1-\exp(-h\delta_2(k))), \\
+    \vec{R}_{hosp,t+h}^{new}(k)&\sim B(\vec{I}_{hosp,t}(k),\quad p_{11}=1-\exp(-h\delta_3(k))), \\
+    \vec{R}_{icu,t+h}^{new}(k)&\sim B(\vec{I}_{icu,t}(k),\quad p_{12}=1-\exp(-h\delta_4(k))), \\
+\end{split}
+\end{equation}
+
+where $p_t^*(k)$ is defined as in Abrams et al. as
+
+\begin{equation}
+\begin{split}
+\label{eq:rate_poisson}
+    p_t^*(k)=1-\exp\Bigg[-h\sum_{k'=0}^{K}\beta_{asym}(k,k') \{I_{presym,t}(k')+I_{asym,t}(k')\}\\+\beta_{sym}(k,k') \{I_{mild,t}(k')+I_{sev,t}(k')\}\Bigg].
+\end{split}
+\end{equation}
+
+It is worth mentioning that \eqref{eq:ownbinomials} gives different transmission dynamics than the ones described in Abrams et al. {\color{red} After discussing with the team, we agreed not to update the former random variables simultaneously. We can instead use conditional probabilities every time a bifurcation in the transitions occurs. The next relations illustrate this.}
+
+\medskip
+Let $n_t^1$ be the number of individuals in $\vec{I}_{presym,t}(k)$, for $t>0$. Then, 
+
+\[\vec{I}_{asym,t+h}^{new}(k) \sim B(\vec{I}_{presym,t}(k),1-\exp(-hp(k)\sigma))\]
+
+and
+
+\begin{equation}
+\begin{split}
+\mathbb{P}\{\vec{I}_{mild,t+h}^{new}(k)=m\}\\
+= \sum_{i=1}^{n_t^1-m}\mathbb{P}\{\vec{I}_{mild,t+h}^{new}(k)=m \mid \vec{I}_{asym,t+h}^{new}(k)=i\}\mathbb{P}\{\vec{I}_{asym,t+h}^{new}(k)=i\}\\
+= \sum_{i=1}^{n_t^1-m}{n_t^1 \choose i}{n_t^1-i \choose m}p_{asym}^{i}p_{mild}^{m}(1-p_{asym})^{n_t^1-i}(1-p_{mild})^{n_t^1-i-m}
+\end{split}
+\end{equation}
+
+Let $n_t^2$ be the number of individuals in $\vec{I}_{sev,t}(k)$, for $t>0$. Then, 
+
+\[\vec{I}_{hosp,t+h}^{new}(k)\sim B(\vec{I}_{sev,t}(k),1-\exp(-h\phi_1(k)\omega(k)))\]
+
+
+
+\begin{equation}
+\begin{split}
+\mathbb{P}\{\vec{I}_{ICU,t+h}^{new}(k)=m\}\\
+= \sum_{i=1}^{n_t^2-m}\mathbb{P}\{\vec{I}_{ICU,t+h}^{new}(k)=m \mid \vec{I}_{hosp,t+h}^{new}(k)=i\}\mathbb{P}\{\vec{I}_{hosp,t+h}^{new}(k)=i\}\\
+= \sum_{i=1}^{n_t^2-m}{n_t^2 \choose i}{n_t^2-i \choose m}p_{hosp}^{i}p_{ICU}^{m}(1-p_{hosp})^{n_t^2-i}(1-p_{ICU})^{n_t^2-i-m}
+\end{split}
+\end{equation}
+
+\subsection{The sequence as a Markov chain}
+From the above random variables, we now define a Markov chain $\mathcal{C} = (Q,q_0,P)$ where $Q$ is a final set of states, $q_0 \in Q$ is the initial state and $P \colon Q \times Q \to [0,1]$ is a probabilistic transition function with $\sum_{q' \in Q} P(q,q') = 1$ for all $q \in Q$. The chain $\mathcal{C}$ induces the stochastic process $\{X_{t},t=h,2h,\ldots,\}$, where $X_{t}$ is a random variable taking up values in $Q$. If $X_{t}=i$, then the process is said to be in state $i$ at time $t$. Concretely, we have:
+\begin{itemize}
+    \item $Q$ is the set of all tuples $(\vec{S},\vec{E},\vec{R},\vec{D},\vec{I}) \in (\mathbb{N}^K)^4 \times \mathbb{N}^{L \times K}$ such that $\vec{S} + \vec{E} + \vec{R} + \vec{D} + \sum_{\ell = 1}^L \vec{I}_\ell$ is the total population.
+    
+    \item $P$ is given by our modified version of the chain binomial model in Abrams et al. We often write $P_{ij}$ instead of $P(i,j)$.
+    
+    \item The discrete time stochastic model in Abrams et al. gives the time unit $h=1/24$ for the Markov process $\{X_{t}\}$. 
+\end{itemize}
+
+\medskip
+Let $X_{t}=\bar{m}$, i.e., the random variables $(\vec{S},\vec{E},\vec{R},\vec{D},\vec{I})$ take up the following values at time $t$: $\vec{S}(t) =  m_1$, $\vec{E}(t) =  m_2$, $\vec{I}_1(t) = m_3$, $\vec{I}_2(t) = m_4$, $\vec{I}_3(t) = m_5$, $\vec{I}_4(t) = m_6$, $\vec{I}_5(t) = m_7$, $\vec{I}_6(t) = m_8$, $\vec{R}(t) = m_9$ and $\vec{D}(t) = m_{10}$, where $m_1,\ldots,m_{10}\in \mathbb{N}^{\geq 0}$. We aim to find the probability for the Markov chain $\mathcal{C}$ to move from state $\bar{m}$ to state $\bar{n}$ in one time step $h$, i. e., we are looking for $P_{\bar{n},\bar{m}}$. 
+
+% briefly explain what am I gonna do
+
+\medskip
+In general, for a finite family of events $\{A_i\}$ and $\mathbb{P}$ a probability function, the following relation holds
+
+\begin{equation}
+    \label{eq:intersection}   
+    \mathbb{P}\left( \bigcap_{i=1}^{n}A_{i}\right)=\mathbb{P}\left(A_n\mid \bigcap_{i=1}^{n-1}A_{i}\right)\mathbb{P}\left(A_{n-1}\mid \bigcap_{i=1}^{n-2}A_{i}\right)\ldots \mathbb{P}\left(A_2\mid A_{1}\right)\mathbb{P}\left(A_{1}\right). 
+\end{equation}
+
+\medskip
+\noindent
+By defining the family of events $\textfrak{A}=\{A_i\}_{\smal{i=1}}^{\smal{10}}$ as
+
+\begin{equation*}
+\begin{split}
+&A_1:=S_{t+1}=n_1 \mbox{ and } X(t)=\bar{m},\\
+&A_2:=E_{t+1}=n_2,\\ 
+&A_3:=I_{presym,t+1}=n_3,\\ 
+&A_4:=I_{asym,t+1}=n_4,\\
+&A_5:=I_{mild,t+1}=n_5,\\ 
+&A_6:=I_{sev,t+1}=n_6,\\ 
+&A_7:=I_{hosp,t+1}=n_7,\\ 
+&A_8:=I_{icu,t+1}=n_8,\\
+&A_9:=R_{t+1}=n_9,\\ 
+&A_{10}:=D_{t+1}=n_{10},
+\end{split}
+\end{equation*}
+%
+we observe that the following relation holds true
+\[P_{\bar{n},\bar{m}}=\mathbb{P}\left( \bigcap_{i=1}^{10}A_{i}\right),\]
+where $\mathbb{P}=P_{\scriptsize{\mathcal{C}}}$ is the probabilistic function induced by our Markov chain. Therefore, it is enough to find out each of the terms on the r.h.s. of equation \eqref{eq:intersection} in order the get $P_{\bar{n},\bar{m}}$. This defines the procedure that follows next.
+
+\medskip
+Given the family $\textfrak{A}$ and the probability function $\mathbb{P}=P_{\scriptsize{\mathcal{C}}}$, we obtain one by one each of the terms on the r.h.s. of equation \eqref{eq:intersection}. 
+
+
+\todo[inline]{Are we allowed to consider the binomials independently wrt age?}
+
+\begin{align*}
+   \mathbb{P}(A_{1})=&\mathbb{P}(S_{t+1}=n_1\mid X(t)=\bar{m}) \\
+   =& \mathbb{P}(S_{t}-E'=n_1\mid X(t)=\bar{m}) \\
+   =& \mathbb{P}(E'=m_1-n_1\mid X(t)=\bar{m}) \\
+   =& {m_1 \choose n_1}(1-p_t^*(k))^{n_1}p_t^{*}(k)^{m_1-n_1},
+\end{align*}
+%where $p_t^*=1-(1-p_t)^{|I_t|}$ and $|I_t|$ stands for the total number of infecteds at time $t$, i.e., $|I_t|=\sum_{i=3}^{8}m_i$.
+where $p_t^*(k)$ was given in \eqref{eq:rate_poisson}.
+%\todo[inline]{How do we compute $p_t$ and $I_t$ for all $t$?}
+
+
+\todo[inline]{$\beta_{sym}$ is to be found in http://www.socialcontactdata.org/socrates/}
+
+The expression for $\mathbb{P}(A_{1})$ gives us the constraint $0\leq n_1\leq m_1=S_{t}$, which in turn comes from the assumption of closed community.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Second factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align*}
+   \mathbb{P}(A_{2}\mid A_{1})=&\mathbb{P}(E_{t+1}=n_2 \mid A_{1}) \\
+   =& \mathbb{P}(E(t)+E'-I_{1}'=n_2 \mid A_{1})\\
+   =& \mathbb{P}(I_{1}'=m_1+m_2-n_1-n_2 \mid A_{1}) \\
+   =& {m_2 \choose n_1+n_2-m_1}p_1^{m_2-n_1-n_2+m_1}(1-p_1)^{n_1+n_2-m_1}.
+\end{align*}
+
+The expression for $\mathbb{P}(A_{2}\mid A_{1})$ gives us the constraint $0\leq n_1+n_2-m_1\leq m_2=E_{t}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Third factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align}
+   \mathbb{P}\bigg(A_{3}\mid \bigcap_{i=1}^{2}A_{i}\bigg)&= \mathbb{P}(I_{t+1}^{presym}=n_3 \mid \cap_{i=1}^{2}A_{i}) \\
+   &= \mathbb{P}(I_1(t)+I_{1}'-I_{2}'-I_{3}'=n_3 \mid \cap_{i=1}^{2}A_{i})\\
+   &= \mathbb{P}(I_{2}'+I_{3}'=m_1+m_2+m_3-n_1-n_2-n_3)
+   \label{eq:presym}
+\end{align}
+
+When calculating \eqref{eq:presym}, we need to consider that $I_{3}'$ follows a binomial distribution with parameters $(I_1(t)-I_{2}', p_3=1-\exp(-h\{1-p(k)\}\theta))$ ({\color{red} apparently, we can keep using the probability $p$}). Therefore, if $I_{2}'=i\leq m_3$, then for $0\leq j \leq m_3 -i$, we observe the expression:
+
+\[\mathbb{P}(I_{3}'=j) ={m_3-i \choose j}p_3^{j}(1-p_3)^{m_3-i-j}.\]
+
+
+We also note that $I_{2}'+I_{3}'\leq m_3$. With this in mind, we consider in the next expression all the possibilities for $I_{2}'+I_{3}'$ to sum $k_1=m_1+m_2+m_3-n_1-n_2-n_3$.
+
+\medskip
+
+\colorbox{Aquamarine}{Case $A_3-i$: If $0\leq k_1\leq m_3$}
+
+%\[\mathbb{P}\bigg( A_{3}\mid \bigcap_{i=1}^{2}A_{i}\bigg) = \sum_{i=0}^{k_1} \mathbb{P}(I_{2}'=i)\mathbb{P}(I_{3}'=k_1-i),\]
+
+%Is the first equality correct?
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg( A_{3}\mid \bigcap_{i=1}^{2}A_{i}\bigg) = \sum_{i=0}^{k_1} \mathbb{P}(I_{2}'=i)\mathbb{P}(I_{3}'=k_1-i)\\
+&= \sum_{i=0}^{k_1}\Bigg[{m_3 \choose i}{m_3-i \choose k_1-i}p_2^{i}(1-p_2)^{m_3-i}p_3^{k_1-i}(1-p_3)^{m_3-k_1}\Bigg].
+\end{split}
+\end{equation*}
+
+
+%since $I_{2}'=i$ implies that $I_{3}'\leq m_3-i$, for $0\leq i \leq m_3$.
+
+\medskip
+\colorbox{Aquamarine}{Case $A_3-ii$. If $k_1<0$ or $m_3 < k_1$} 
+\[\mathbb{P}\bigg( A_{3}\mid \bigcap_{i=1}^{2}A_{i}\bigg) =0,\]
+
+since $0\leq I_{2}'+I_{3}'\leq m_3$.
+\medskip
+
+\hline
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Fourth factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\begin{align}
+   \mathbb{P}\bigg(A_{4}\mid \bigcap_{i=1}^{3}A_{i}\bigg)&=\mathbb{P}(I_{t+1}^{asym}=n_4 \mid \cap_{i=1}^{3}A_{i}) \\
+   &= \mathbb{P}(I_2(t)+I_{2}'-R_{1}'=n_4 \mid \cap_{i=1}^{3}A_{i} )\\
+   &= \mathbb{P}(I_{2}'-R_{1}'=n_4-m_4 \mid \cap_{i=1}^{3}A_{i} )
+   \label{eq:asym}
+\end{align}
+
+For $I_{2}'-R_{1}'=n_4-m_4$ to happen, we need $I_{2}' \geq n_4-m_4$. Furthermore, we observe that $I_{2}'$ already appears in the expression for $\mathbb{P}\big(A_{3}\mid \cap_{i=1}^{2}A_{i}\big)$, which yielded the constraint $I_{2}'\leq k_1\leq m_3$. Finally, considering the restriction $R_{1}'\leq m_4$ (in table \ref{tab:my_constraints_table}) and combining all these together, we obtain the next two cases. %(if we want $\mathbb{P}\big (A_{4}\mid \bigcap_{i=1}^{3}A_{i}\big)>0$).
+
+\medskip
+\colorbox{Aquamarine}{Case $A_4-i$. If $k_1\geq n_4-m_4\geq 0$ and $0\leq k_1\leq m_3$:}
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{4}\mid \bigcap_{i=1}^{3}A_{i}\bigg)= \sum_{i=0}^{k_2} \mathbb{P}(I_{2}'=n_4-m_4+i)\mathbb{P}(R_{1}'=i)\\
+&= \sum_{i=0}^{k_2}\Bigg[{m_3 \choose n_4-m_4+i}{m_4 \choose i}p_2^{n_4-m_4+i}(1-p_2)^{m_3-(n_4-m_4+i)}p_9^{i}(1-p_9)^{m_4-i}\Bigg],
+\end{split}
+\end{equation*}
+
+where $k_2=\min(k_1-(n_4-m_4),m_4)$. 
+
+\medskip
+\colorbox{Aquamarine}{Case $A_4-ii$. If $n_4-m_4< 0$ and case $A_3-i$ holds.}
+
+If $n_4> k_1$ then $\mathbb{P}(I_{2}'=i)=0$ for $k_1< i \leq n_4$. Thus, we let $k_3=\min(n_4, k_1)$.
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{4}\mid \bigcap_{i=1}^{3}A_{i}\bigg)= \sum_{i=0}^{k_3} \mathbb{P}(I_{2}'=i)\mathbb{P}(R_{1}'=m_4-n_4+i)\\
+&= \sum_{i=0}^{k_3}\Bigg[{m_3 \choose i}{m_4 \choose m_4-n_4+i}p_2^{i}(1-p_2)^{m_3-i}p_9^{m_4-n_4+i}(1-p_9)^{n_4-i}\Bigg].
+\end{split}
+\end{equation*}
+
+
+\medskip
+Otherwise:
+
+\[\mathbb{P}\bigg(A_{4}\mid \bigcap_{i=1}^{3}A_{i}\bigg)=0.\]
+
+\medskip
+
+\hline
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Fifth factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align*}
+   \mathbb{P}\bigg(A_{5}\mid \bigcap_{i=1}^{4}A_{i}\bigg)&=\mathbb{P}(I_{t+1}^{mild}=n_5 \mid \cap_{i=1}^{4}A_{i} ) \\
+   &= \mathbb{P}(I_3(t)+I_{3}'-I_{4}'-R_{2}'=n_5 \mid \cap_{i=1}^{4}A_{i})\\
+   &= \mathbb{P}(I_{3}'-(I_{4}'+R_{2}')=n_5-m_5\mid \cap_{i=1}^{4}A_{i}).
+\end{align*}
+
+The calculation of $\mathbb{P}\big( A_{3}\mid \cap_{i=1}^{2}A_{i}\big))$ showed that if $I_{2}'=i$ then $I_{3}' = k_1-i$, for $0\leq i \leq k_1 \leq m_3$. We also note that the calculation of $\mathbb{P}\big( A_{4}\mid \cap_{i=1}^{3}A_{i}\big))$ yielded the conditions  $n_4-m_4\leq I_{2}'\leq n_4-m_4+k_2$ and $0\leq I_{2}'\leq k_3$, for the case that $0\leq n_4-m_4\leq k_1$ and $n_4-m_4 \leq 0$, respectively. Furthermore, as $I_{4}'$ and $R_{2}'$ are obtained by sequentially drawing from $\vec{I}(t)_3$, but without replacement, the following relation holds: $I_{4}'+R_{2}'\leq m_5$. Three cases are being encountered.
+
+\medskip
+\colorbox{Aquamarine}{Case $A_5-i$: $A_4-i$ holds true}   
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{5}\mid \bigcap_{i=1}^{4}A_{i}\bigg)\\
+&=\sum_{i=n_4-m_4}^{n_4-m_4+k_2} \mathbb{P}\bigg(I_{3}'-(I_{4}'+R_{2}')=n_5-m_5\mid I_{2}'=i, I_{3}'=k_1-i\bigg)\\ 
+&= \sum_{i=n_4-m_4}^{n_4-m_4+k_2} \mathbb{P}\bigg(I_{4}'+R_{2}'=p\bigg)\\
+&=\sum_{i=n_4-m_4}^{n_4-m_4+k_2}\sum_{j=0}^{p} \mathbb{P}\bigg(I_{4}'=j\bigg) \mathbb{P}\bigg(R_{2}'=p-j\bigg)\\
+&=\sum_{i=n_4-m_4}^{n_4-m_4+k_2}\sum_{j=0}^{p} \Bigg[{m_5 \choose j}{m_5-j \choose p-j}p_4^{j}(1-p_4)^{m_5-j}p_{10}^{p-j}(1-p_{10})^{m_5-p}\Bigg],
+\end{split}
+\end{equation*}
+
+where $p=m_5-n_5+k_1-i$.  
+
+\medskip
+\colorbox{Aquamarine}{Case $A_5-ii$: $A_4-ii$ holds true.} 
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{5}\mid \bigcap_{i=1}^{4}A_{i}\bigg)\\
+&= \sum_{i=0}^{k_3} \mathbb{P}\bigg(I_{4}'+R_{2}'=m_5-n_5+k_1-i\bigg)\\
+&=\sum_{i=0}^{k_3}\sum_{j=0}^{p} \mathbb{P}\bigg(I_{4}'=j\bigg) \mathbb{P}\bigg(R_{2}'=p-j\bigg)\\
+&=\sum_{i=0}^{k_3}\sum_{j=0}^{p} \Bigg[{m_5 \choose j}{m_5-j \choose p-j}p_4^{j}(1-p_4)^{m_5-j}p_{10}^{p-j}(1-p_{10})^{m_5-p}\Bigg],
+\end{split}
+\end{equation*}
+
+where $p=m_5-n_5+k_1-i$. 
+
+\medskip
+Remark. We note that in both $A_5-i$ and $A_5-ii$ cases, if $p$ does not satisfy $0\leq p \leq m_5$, then   
+
+\[\mathbb{P}\big(I_{4}'+R_{2}'=p\big)=0.\]
+
+\medskip
+
+\colorbox{Aquamarine}{Case $A_5-iii$. If neither $A_4-i$ nor $A_4-ii$ hold, then}
+
+\[\mathbb{P}\bigg(A_{5}\mid \bigcap_{i=1}^{4}A_{i}\bigg)=0.\]
+
+
+\medskip
+
+\hline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Sixth factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align*}
+   \mathbb{P}\bigg(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\bigg)&=\mathbb{P}(I_{t+1}^{sev}=n_6 
+   \mid\cap_{i=1}^{5}A_{i})\\
+   &= \mathbb{P}(I_4(t)+I_{4}'-I_{5}'-I_{6}'=n_6\mid \cap_{i=1}^{5}A_{i})\\
+   &= \mathbb{P}(I_{4}'-(I_{5}'+I_{6}')=n_6-m_6\mid \cap_{i=1}^{5}A_{i})\\
+\end{align*}
+
+%We need now to go back to the previous two probabilities, to obtain the bounds for I_4':
+
+We observe that $I_4'$ was already considered in $\mathbb{P}(A_{5}\mid \bigcap_{i=1}^{5}A_{i})$, whose calculation was in turn worked out for two cases. 
+
+\colorbox{Aquamarine}{Case $A_6-i$. Case $A_5-i$ holds true}%, whicn in turn calls case $A_4-i$. 
+
+%The following is an analysis of case $A_5-i$
+%For this case, we observe that $I_4'$ can only take up values within $[0,\max{p}]$, for  $p=m_5-n_5+k_1-i$ and $i \in \{n_4-m_4, \ldots,  n_4-m_4+k_2\}$. 
+As case $A_5-i$ occurs when case $A_4-i$ occurs, then $k_2\geq 0$ and $-(n_4-m_4)\geq-(n_4-m_4+k_2)$, and therefore  $\max{p}=m_5-n_5+k_1-(n_4-m_4)\geq m_5-n_5+k_1-(n_4-m_4+k_2)$. In this manner, for $\mathbb{P}\big(I_{4}'+R_{2}'=p\big)>0$ to happen, it is required for $p_{max}\geq 0$, and in that case $I_4'$ takes up values within the interval $[0,q=\min\{m_5, p_{max}\}]$, since $I_{4}'+R_{2}'\leq m_5$. On the other hand, if $p_{max}<0$, then $\mathbb{P}\big(I_{4}'+R_{2}'=p\big)=0$. % $0\leq I_4'\leq m_5-n_5+k_1-(n_4-m_4)$.
+
+\medskip
+\colorbox{Aquamarine}{Subcase $A_6-i-i$. If $q\geq n_6-m_6\geq 0$}
+
+%\[\mathbb{P}\bigg(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\bigg)=\sum_{i=0}^{k_4} P(I_{4}'=n_6-m_6+i)P(I_{5}'+I_{6}'=i),\]
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\bigg)=\sum_{i=0}^{k_4} \mathbb{P}(I_{4}'=n_6-m_6+i)\mathbb{P}(I_{5}'+I_{6}'=i)\\
+&=\sum_{i=0}^{k_4} \Bigg[{m_5 \choose n_6-m_6+i}p_4^{n_6-m_6+i}(1-p_4)^{m_5-n_6+m_6-i}\mathbb{P}(I_{5}'+I_{6}'=i)\Bigg],
+\end{split}
+\end{equation*}
+
+
+where $k_4=\min(q-(n_6-m_6),m_6)$, since $I_{5}'+I_{6}'\leq m_6$. Finally, the probability $\mathbb{P}(I_{5}'+I_{6}'=i)$ is calculated as follows
+
+%\[\mathbb{P}(I_{5}'+I_{6}'=i)=\sum_{j=0}^{i} \mathbb{P}(I_{5}'=j)\mathbb{P}(I_{6}'=i-j),\]
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(I_{5}'+I_{6}'=i)=\sum_{j=0}^{i} \mathbb{P}(I_{5}'=j)\mathbb{P}(I_{6}'=i-j)\\
+&=\sum_{j=0}^{i}\Bigg[{m_6 \choose j}{m_6-j \choose i-j}p_5^{j}(1-p_5)^{m_6-j}p_6^{i-j}(1-p_6)^{m_6-i}\Bigg],
+\end{split}
+\end{equation*}
+
+
+for $0\leq i\leq k_4$. 
+
+\medskip
+\colorbox{Aquamarine}{Case $A_6-i-ii$ If $0 \leq q \leq n_6-m_6$.} Then $\mathbb{P}(A_{6}\mid \cap_{i=1}^{5}A_{i})=0$.
+
+\medskip
+\colorbox{Aquamarine}{Case $A_6-i-iii$ If $n_6-m_6 < 0 \leq q$.}
+
+%\[\mathbb{P}(I_{4}'-(I_{5}'+I_{6}')=n_6-m_6\mid \cap_{i=1}^{5}A_{i})=\sum_{i=0}^{k_5} \mathbb{P}(I_{4}'=i)\mathbb{P}(I_{5}'+I_{6}'=m_6-n_6+i),\]
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\bigg)=\sum_{i=0}^{k_5} \mathbb{P}(I_{4}'=i)\mathbb{P}(I_{5}'+I_{6}'=m_6-n_6+i)\\
+&=\sum_{i=0}^{k_5} \Bigg[{m_5 \choose i}p_4^{i}(1-p_4)^{m_5-i}\mathbb{P}(I_{5}'+I_{6}'=m_6-n_6+i)\Bigg],
+\end{split}
+\end{equation*}
+
+
+where $k_5=\min(q,n_6)$, since $0\leq I_{4}'\leq q$ and $I_{5}'+I_{6}'\leq m_6$. In turn, $\mathbb{P}(I_{5}'+I_{6}'=m_6-n_6+i)$ is given by the next expression.
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(I_{5}'+I_{6}'=m_6-n_6+i)=\sum_{j=0}^{m_6-n_6+i} \mathbb{P}(I_{5}'=j)\mathbb{P}(I_{6}'=m_6-n_6+i-j)\\
+&=\sum_{j=0}^{m_6-n_6+i}\Bigg[{m_6 \choose j}{m_6-j \choose m_6-n_6+i-j}p_5^{j}(1-p_5)^{m_6-j}p_6^{m_6-n_6+i-j}(1-p_6)^{n_6-i}\Bigg],
+\end{split}
+\end{equation*}
+
+for $0\leq i\leq k_5$.
+
+\medskip
+
+Turn for cases $A_6-ii-i$ to $A_6-ii-iii$: 
+
+\colorbox{Aquamarine}{Case $A_6-ii$. Case $A_5-ii$ holds true, and in turn case $A_4-ii$ holds true}%, whicn in turn calls case $A_4-i$. 
+
+%The following is an analysis of case $A_5-i$
+%For this case, we observe that $I_4'$ can only take up values within $[0,\max{p}]$, for  $p=m_5-n_5+k_1-i$ and $i \in \{n_4-m_4, \ldots,  n_4-m_4+k_2\}$. 
+As case $A_4-ii$ occurs, then $k_3\geq 0$ and therefore  $p_{max}'=m_5-n_5+k_1\geq m_5-n_5+k_1-k_3$. In this manner, for $\mathbb{P}\big(I_{4}'+R_{2}'=p\big)>0$ to happen, it is required for $p_{max}'\geq 0$, and in that case $I_4'$ takes up values within the interval $[0,q'=\min\{m_5, p_{max}'\}]$, since $I_{4}'+R_{2}'\leq m_5$.
+
+\medskip
+\colorbox{Aquamarine}{Subcase $A_6-ii-i$. If $q'\geq n_6-m_6\geq 0$}
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\bigg)=\sum_{i=0}^{k_6} \mathbb{P}(I_{4}'=n_6-m_6+i)\mathbb{P}(I_{5}'+I_{6}'=i)\\
+&=\sum_{i=0}^{k_6} \Bigg[{m_5 \choose n_6-m_6+i}p_4^{n_6-m_6+i}(1-p_4)^{m_5-n_6+m_6-i}\mathbb{P}(I_{5}'+I_{6}'=i)\Bigg],
+\end{split}
+\end{equation*}
+
+
+where $k_6=\min(q'-(n_6-m_6),m_6)$, since $I_{5}'+I_{6}'\leq m_6$. Finally, the probability $\mathbb{P}(I_{5}'+I_{6}'=i)$ is calculated as follows
+
+
+
+\hline
+%It is checked until here 8/04
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Seventh factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{align*}
+   \mathbb{P}\bigg(A_{7}\mid \bigcap_{i=1}^{6}A_{i}\bigg)&=\mathbb{P}(I_{t+1}^{hosp} = n_7 \mid \cap_{i=1}^{6}A_{i}) \\
+   &= \mathbb{P}(I_5(t)+I_{5}'-D_{1}'-R_{3}'=n_7\mid \cap_{i=1}^{6}A_{i})\\
+   &= \mathbb{P}(I_{5}'-(D_{1}'+R_{3}')=n_7-m_7\mid \cap_{i=1}^{6}A_{i})
+   %&=\sum_{i=0}^{k_5} P(I_{5}'=n_7-m_7+i)P(D_{1}'+R_{3}'=i),
+\end{align*}
+
+Case i) If $m_6\geq n_7-m_7\geq 0$:
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{7}\mid \bigcap_{i=1}^{6}A_{i}\bigg)=\sum_{i=0}^{k_7} \mathbb{P}(I_{5}'=n_7-m_7+i)\mathbb{P}(D_{1}'+R_{3}'=i)\\
+&=\sum_{i=0}^{k_7} \Bigg[{m_6 \choose n_7-m_7+i}(1-\exp(-h\phi_1(k)\omega(k)))^{n_7-m_7+i}\exp(-h\phi_1(k)\omega(k))^{m_6-n_7+m_7-i}\\
+&*\mathbb{P}(D_{1}'+R_{3}'=i)\Bigg],
+\end{split}
+\end{equation*}
+
+
+where $k_7=\min(m_6-(n_7-m_7),m_7)$, since $I_{5}'\leq m_6$ and $D_{1}'+R_{3}'\leq m_7$. Finally, the probability $\mathbb{P}(D_{1}'+R_{3}'=i)$ follows the expression
+
+%\[\mathbb{P}(I_{5}'+I_{6}'=i)=\sum_{j=0}^{i} \mathbb{P}(I_{5}'=j)\mathbb{P}(I_{6}'=i-j),\]
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(R_{3}'+D_{1}'=i)=\sum_{j=0}^{i} \mathbb{P}(R_{3}'=j)\mathbb{P}(D_{1}'=i-j)\\
+&=\sum_{j=0}^{i}\Bigg[{m_7 \choose j}{m_7-j \choose i-j}(1-\exp(-h\delta_3(k)))^{j}\exp(-h\delta_3(k))^{m_7-j}\\
+&*(1-\exp(-h\tau_1(k)))^{i-j}\exp(-h\tau_1(k))^{m_7-i}\Bigg],
+\end{split}
+\end{equation*}
+
+
+for $0\leq i\leq k_7$. 
+
+\medskip
+Case ii) If $n_7-m_7\geq 0$ but $m_6\leq n_7-m_7$, then $\mathbb{P}(A_{7}\mid \cap_{i=1}^{6}A_{i})=0$.
+
+\medskip
+Case iii) If $n_7-m_7< 0$:
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{7}\mid \bigcap_{i=1}^{6}A_{i}\bigg)=\sum_{i=0}^{k_8} \mathbb{P}(I_{5}'=i)\mathbb{P}(D_{1}'+R_{3}'=m_7-n_7+i)\\
+&=\sum_{i=0}^{k_8} \Bigg[{m_6 \choose i}(1-\exp(-h\phi_1(k)\omega(k)))^{i}\exp(-h\phi_1(k)\omega(k))^{m_6-i}\\
+&*\mathbb{P}(D_{1}'+R_{3}'=m_7-n_7+i)\Bigg],
+\end{split}
+\end{equation*}
+
+where $k_8=\min(m_6,n_7)$, since $I_{5}'\leq m_6$ and $R_{3}'+D_{1}'\leq m_7$. In turn, $\mathbb{P}(D_{1}'+R_{3}'=m_7-n_7+i)$ is given by the next expression.
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(R_{3}'+D_{1}'=m_7-n_7+i)=\sum_{j=0}^{m_7-n_7+i} \mathbb{P}(R_{3}'=j)\mathbb{P}(D_{1}'=m_7-n_7+i-j)\\
+&=\sum_{j=0}^{m_7-n_7+i}\Bigg[{m_7 \choose j}{m_7-j \choose m_7-n_7+i-j}(1-\exp(-h\delta_3(k)))^{j}\exp(-h\delta_3(k))^{m_7-j}\\
+&*(1-\exp(-h\tau_1(k)))^{m_7-n_7+i-j}\exp(-h\tau_1(k))^{n_7-i}\Bigg],
+\end{split}
+\end{equation*}
+
+for $0\leq i\leq k_8$. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Eight factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align*}
+   \mathbb{P}\bigg(A_{8}\mid \bigcap_{i=1}^{7}A_{i}\bigg)&=\mathbb{P}(I_{t+1}^{ICU} = n_8 \mid \cap_{i=1}^{7}A_{i}) \\
+   &= \mathbb{P}(I_6(t)+I_{6}'-D_{2}'-R_{4}'=n_8\mid \cap_{i=1}^{7}A_{i})\\
+   &= \mathbb{P}(I_{6}'-(D_{2}'+R_{4}')=n_8-m_8\mid \cap_{i=1}^{7}A_{i})\\
+   %&=\sum_{i=0}^{k_5} P(I_{6}'=n_8-m_8+i)P(D_{2}'+R_{4}'=i),
+\end{align*}
+
+
+Case i) If $m_6\geq n_8-m_8\geq 0$:
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{8}\mid \bigcap_{i=1}^{7}A_{i}\bigg)=\sum_{i=0}^{k_9} \mathbb{P}(I_{6}'=n_8-m_8+i)\mathbb{P}(D_{2}'+R_{4}'=i)\\
+&=\sum_{i=0}^{k_9} \Bigg[{m_6-I_{5}' \choose n_8-m_8+i}(1-\exp(-h\{1-\phi_1(k)\}\omega(k)))^{n_8-m_8+i}\\
+&*\exp(-h\{1-\phi_1(k)\}\omega(k))^{m_6-n_7-n_8+m_8-i}\mathbb{P}(D_{2}'+R_{4}'=i)\Bigg],
+\end{split}
+\end{equation*}
+
+\todo[inline]{The exact boundary for $I_{6}'$ is a tricky one.}
+where $k_9=\min(m_6-(n_8-m_8),m_8)$  (\textit{$k_9=\min(m_6-I_{5}'-(n_8-m_8),m_8)$ is more precise (by conditioning on $A_7$ we get $I_{6}'\leq m_6-I_{5}'$)}), since $I_{6}'\leq m_6$ and $D_{2}'+R_{4}'\leq m_8$. Finally, the probability $\mathbb{P}(D_{2}'+R_{4}'=i)$ follows the expression
+
+%\[\mathbb{P}(I_{5}'+I_{6}'=i)=\sum_{j=0}^{i} \mathbb{P}(I_{5}'=j)\mathbb{P}(I_{6}'=i-j),\]
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(R_{4}'+D_{2}'=i)=\sum_{j=0}^{i} \mathbb{P}(R_{4}'=j)\mathbb{P}(D_{2}'=i-j)\\
+&=\sum_{j=0}^{i}\Bigg[{m_8 \choose j}{m_8-j \choose i-j}(1-\exp(-h\delta_4(k)))^{j}\exp(-h\delta_4(k))^{m_8-j}\\
+&*(1-\exp(-h\tau_2(k)))^{i-j}\exp(-h\tau_2(k))^{m_8-i}\Bigg].
+\end{split}
+\end{equation*}
+
+
+for $0\leq i\leq k_9$. 
+
+\medskip
+Case ii) If $n_8-m_8< 0$:
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}\bigg(A_{8}\mid \bigcap_{i=1}^{7}A_{i}\bigg)=\sum_{i=0}^{k_{10}} \mathbb{P}(I_{6}'=i)\mathbb{P}(D_{2}'+R_{4}'=m_8-n_8+i)\\
+&=\sum_{i=0}^{k_{10}} \Bigg[{m_6-I_{5}' \choose i}(1-\exp(-h\{1-\phi_1(k)\}\omega(k)))^{i}\exp(-h\{1-\phi_1(k)\}\omega(k))^{m_6-I_{5}'-i}\\
+&*\mathbb{P}(D_{2}'+R_{4}'=m_8-n_8+i)\Bigg],
+\end{split}
+\end{equation*}
+
+where $k_{10}=\min(m_6-I_{5}',n_8)$, since $I_{6}'\leq m_6-I_{5}'$ and $R_{4}'+D_{2}'\leq m_8$. In turn, $\mathbb{P}(D_{2}'+R_{4}'=m_8-n_8+i)$ is given by the next expression.
+
+%where $k_9=\min(m_6-I_{5}',m_8-(m_8-n_8))=\min(m_6-I_{5}',n_8)$, since $I_{6}'\leq m_6-I_{5}'$ and $R_{4}'+D_{2}'\leq m_8$. In turn, $\mathbb{P}(D_{2}'+R_{4}'=m_8-n_8+i)$ is given by the next expression.
+
+\begin{equation*}
+\begin{split}
+&\mathbb{P}(R_{4}'+D_{2}'=m_8-n_8+i)=\sum_{j=0}^{m_8-n_8+i} \mathbb{P}(R_{4}'=j)\mathbb{P}(D_{2}'=m_8-n_8+i-j)\\
+&=\sum_{j=0}^{m_8-n_8+i}\Bigg[{m_8 \choose j}{m_8-j \choose m_8-n_8+i-j}(1-\exp(-h\delta_4(k)))^{j}\exp(-h\delta_4(k))^{m_8-j}\\
+&*(1-\exp(-h\tau_2(k)))^{m_8-n_8+i-j}\exp(-h\tau_2(k))^{n_8-i}\Bigg],
+\end{split}
+\end{equation*}
+
+for $0\leq i\leq k_{10}$. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Ninth factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{align*}
+   \mathbb{P}\bigg(A_{9}\mid \bigcap_{i=1}^{8}A_{i}\bigg)&=\mathbb{P}(R_{t+1}= n_9 \mid \cap_{i=1}^{8}A_{i}) \\
+   &= \mathbb{P}(R_{t}+R_{1}'+R_{2}'+R_{3}'+R_{4}'=n_9\mid \cap_{i=1}^{8}A_{i})\\
+   &= \mathbb{P}(R_{1}'+(R_{2}'+R_{3}'+R_{4}')=n_9-m_9\mid \cap_{i=1}^{8}A_{i})\\
+   &=\sum_{i=0}^{n_9-m_9} \mathbb{P}(R_{1}'=n_9-m_9-i)\mathbb{P}(R_{2}'+R_{3}'+R_{4}'=i)\\
+   &=\sum_{i=0}^{n_9-m_9}\Bigg[{m_4 \choose n_9-m_9-i}(1-\exp(-h\delta_1))^{n_9-m_9-i}\exp(-h\delta_1)^{m_4-(n_9-m_9-i)}\\
+   &*\mathbb{P}(R_{2}'+R_{3}'+R_{4}'=i)\Bigg],
+\end{align*}
+
+where
+\begin{align*}
+    \mathbb{P}(R_{2}'+R_{3}'+R_{4}'=i)&=\sum_{j=0}^{i} \mathbb{P}(R_{2}'=i-j)\mathbb{P}(R_{3}'+R_{4}'=j)\\
+    &=\sum_{j=0}^{i}\Bigg[{m_5-I_{4}' \choose i-j}(1-\exp(-h\delta_2))^{i-j}\exp(-h\delta_2)^{m_5-I_{4}'-i+j}\\
+    &*\mathbb{P}(R_{3}'+R_{4}'=j),
+\end{align*}
+
+and
+
+\begin{align*}
+    \mathbb{P}(R_{3}'+R_{4}'=j)&=\sum_{\ell=0}^{j} \mathbb{P}(R_{3}'=j-\ell)\mathbb{P}(R_{4}'=\ell)\\
+    &=\sum_{\ell=0}^{j}\Bigg[{m_7 \choose j-\ell}{m_8 \choose \ell}(1-\exp(-h\delta_3))^{j-\ell}\exp(-h\delta_3)^{m_7-j+\ell}\\
+    &*(1-\exp(-h\delta_4))^{\ell}\exp(-h\delta_4)^{m_8-\ell}\Bigg].
+\end{align*}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Tenth factor%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{align*}
+   \mathbb{P}\bigg(A_{10}\mid \bigcap_{i=1}^{9}A_{i}\bigg)&=\mathbb{P}(D_{t+1}= n_{10} \mid \cap_{i=1}^{9}A_{i}) \\
+   &= \mathbb{P}(D_{t}+D_{1}'+D_{2}'=n_{10}\mid \cap_{i=1}^{9}A_{i})\\
+   &= \mathbb{P}(D_{1}'+D_{2}'=n_{10}-m_{10}\mid \cap_{i=1}^{9}A_{i})\\
+   %&=\sum_{i=0}^{n_9-m_9} \mathbb{P}(R_{1}'=n_9-m_9-i)\mathbb{P}(R_{2}'+R_{3}'+R_{4}'=i),
+\end{align*}
+
+Since $D_{1}'+D_{2}'\geq 0$ then we will only consider $n_{10}-m_{10}\geq 0$. 
+
+\medskip
+Case i) If $n_{10}-m_{10}\leq m_7$:
+
+
+\begin{align*}
+    &\sum_{i=0}^{k} \mathbb{P}(D_{1}'=n_{10}-m_{10}-i)\mathbb{P}(D_{2}'=i)\\
+    &=\sum_{i=0}^{k}\Bigg[{m_7-R_{3}'\choose n_{10}-m_{10}-i}{m_8-R_{4}' \choose i}(1-\exp(-h\tau_1(k)))^{n_{10}-m_{10}-i}\\
+    &*\exp(-h\tau_1(k))^{m_7-R_{3}'-(n_{10}-m_{10}-i)}(1-\exp(-h\tau_2(k)))^{i}\exp(-h\tau_2(k))^{m_8-R_{4}'-i}\Bigg],
+\end{align*}
+
+where $k=\min(n_{10}-m_{10},m_8)$, since $D_{2}'\leq m_8$.
+
+
+\medskip
+Case ii) If $n_{10}-m_{10}\leq m_8$:
+
+
+\begin{align*}
+    &\sum_{i=0}^{k} \mathbb{P}(D_{1}'=i)\mathbb{P}(D_{2}'=n_{10}-m_{10}-i)\\
+    &=\sum_{i=0}^{k}\Bigg[{m_7-R_{3}'\choose i}{m_8-R_{4}' \choose n_{10}-m_{10}-i}(1-\exp(-h\tau_1(k)))^{n_{10}-m_{10}-i}\\
+    &*\exp(-h\tau_1(k))^{m_7-R_{3}'-(n_{10}-m_{10}-i)}(1-\exp(-h\tau_2(k)))^{i}\exp(-h\tau_2(k))^{m_8-R_{4}'-i}\Bigg],
+\end{align*}
+
+where $k=\min(n_{10}-m_{10},m_7)$, since $D_{1}'\leq m_7$.
+
+\medskip
+If $n_{10}-m_{10}> m_7,m_8$, then the prob is zero.
+
+
+
+\section{Algorithm optimization}
+    %To fill in here the boundaries and cases
+    \begin{itemize}
+        \item When calculating $\mathbb{P}(A_{1})$, the constraint is given by $\vec{S}(t+h)\leq\vec{S}(t)$.
+        \item When calculating $\mathbb{P}(A_{2}\mid A_{1})$, the constraint is given by $n_1+n_2-m_1\leq m_2$.
+        \item When calculating $\mathbb{P}\big(A_{3}\mid \bigcap_{i=1}^{2}A_{i}\big)$, the constraints to be satisfied are $0\leq m_1+m_2+m_3-n_1-n_2-n_3\leq m_3$ and $I_{2}'+I_{3}'\leq \vec{I}(t)_{1}$.
+        \item The calculation of $\mathbb{P}\big(A_{4}\mid \bigcap_{i=1}^{3}A_{i}\big)$ yields two cases:
+        \begin{enumerate}
+            \item $0\leq n_4-m_4 \leq m_1+m_2+m_3-n_1-n_2-n_3\leq m_3$.
+            \item $0\geq n_4-m_4$ and $n_4\leq m_1+m_2+m_3-n_1-n_2-n_3$.
+        \end{enumerate}
+        \item $\mathbb{P}\big(A_{5}\mid \bigcap_{i=1}^{4}A_{i}\big)$ gives positive values only if $\vec{I}^{new}_{t+h,4}+\vec{R}^{new}_{t+h,2}\leq \vec{I}(t)_{3}$ and one of the next cases holds
+        \begin{enumerate}
+            \item $0\leq n_5-m_5 \leq m_1+m_2+m_3-n_1-n_2-n_3$.
+            \item $n_5-m_5\leq 0$.
+        \end{enumerate}
+        \item $\mathbb{P}\big(A_{6}\mid \bigcap_{i=1}^{5}A_{i}\big)$ is calculated for the cases
+        \begin{enumerate}
+            \item $m_5\geq n_6-m_6\geq 0$.
+            \item $n_6-m_6< 0$.
+        \end{enumerate}
+        \item $\mathbb{P}\big(A_{7}\mid \bigcap_{i=1}^{6}A_{i}\big)$ is calculated for the cases
+        \begin{enumerate}
+            \item $m_6\geq n_7-m_7\geq 0$.
+            \item $n_7-m_7< 0$.
+        \end{enumerate}
+        \item $\mathbb{P}\big(A_{8}\mid \bigcap_{i=1}^{7}A_{i}\big)$ is calculated for the cases
+        \begin{enumerate}
+            \item $m_6\geq n_8-m_8\geq 0$.
+            \item $n_8-m_8< 0$.
+        \end{enumerate}
+        \item $\mathbb{P}\big(A_{10}\mid \bigcap_{i=1}^{9}A_{i}\big)$ makes sense only for $n_{10}-m_{10}\geq 0$, in which case we distinguish between the next 
+        \begin{enumerate}
+            \item $n_{10}-m_{10}\leq m_7$.
+            \item $n_{10}-m_{10}\leq m_8$.
+        \end{enumerate}
+        
+    \end{itemize}
+    
+\begin{table}[t]
+    \centering
+    \begin{tabular}{c | c | c}
+        Variable & Upper boundary & Type\\
+        \hline
+        $\vec{E}^{new}_{t+h}$ & $\vec{S}(t)=m_1$ & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,1}$ & $\vec{E}(t)=m_2$ & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,2}$ & $\vec{I}(t)_1=m_3$ & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,3}$ & $m_3-\vec{I}^{new}_{t+h,2}$ & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,4}$ & $\vec{I}(t)_3=m_5$ & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,5}$ &  $\vec{I}(t)_4=m_6$  & ${} \in \mathbb{N}^K$\\
+        $\vec{I}^{new}_{t+h,6}$ & $m_6-\vec{I}^{new}_{t+h,5}$ & ${} \in \mathbb{N}^K$\\
+        $\vec{R}^{new}_{t+h,1}$ & $\vec{I}(t)_2=m_4$ & ${} \in \mathbb{N}^K$\\
+        $\vec{R}^{new}_{t+h,2}$ & $m_5-\vec{I}^{new}_{t+h,4}$ & ${} \in \mathbb{N}^{K}$\\
+        $\vec{R}^{new}_{t+h,3}$ & $\vec{I}(t)_5=m_7$ & ${} \in \mathbb{N}^K$\\
+        $\vec{R}^{new}_{t+h,4}$ & $\vec{I}(t)_6=m_8$ & ${} \in \mathbb{N}^K$\\
+        $\vec{D}^{new}_{t+h,1}$ & $m_7-\vec{R}^{new}_{t+h,3}$ & ${} \in \mathbb{N}^K$\\
+        $\vec{D}^{new}_{t+h,2}$ & $m_8-\vec{R}^{new}_{t+h,4}$ & ${} \in \mathbb{N}^K$
+    \end{tabular}
+    \caption{Boundaries for numbers of new individuals per compartment}
+    \label{tab:my_constraints_table}
+\end{table}
+    
+   
+    
+\section{Introduction}
+
+We begin with a short introduction to the concepts used in the mathematical modelling of epidemics. 
+
+When an infectious individual makes contact with a susceptible individual, there is some probability $\beta \in \mathbb{R}$ that such contact will lead to disease transmission. We refer to this probability as the \textit{transmission coefficient}, which is disease-specific. The transmission dynamics (within a population) are most simply described with the following set of equations:
+
+\begin{equation} 
+\label{eq:SIR}
+\begin{split}
+\dfrac{dS}{dt} &=  -\beta SI \\
+ \dfrac{dI}{dt} &=  \beta SI - \gamma I \\
+ \dfrac{dR}{dt} &=  \gamma I\end{split}
+\end{equation}
+
+\noindent
+where $S(t),I(t),R(t) \in \mathbb{R}^K$ denote the number of susceptible, infected and recovered individuals, respectively. (The value $K \in \mathbb{N}$ is used to group individuals per {\color{red} compartment}.) Gamma, $\gamma \in \mathbb{R}$, is the so-called \textit{recovery rate}. %Maybe talk about the scottish guy who made it ...
+
+In equation \eqref{eq:SIR}, it is implied that all infectious individuals interact with all susceptible individuals. We refer to this case as \textit{uniform mixing}. Of course, this is far from realistic, as for large population sizes $N$ it is impossible for all individuals to interact with each other. Various approaches have been devised to better represent contact behaviour within the population. Abrams et al. make use of a contact matrix $C$ (\textcolor{red}{Do we have access to such matrix?}).
+
+\subsection{Transmission dynamics as a Markov chain}
+
+
+If $N<\infty$ in \eqref{eq:SIR}, we introduce $P_{n,m}(t)$ as the probability that at time $t$ there are $n$ susceptibles and $m$ infecteds, with $n,m\geq 0$ and $n+m\leq N$. We will use the combination $(n,m)$ to index the states of a Markov chain. This formulation can be translated to the standard formulation in terms of vectors and matrices by employing an appropriately defined map $(n,m)\mapsto i$. However, we avoid doing so, as it will complicate the bookkeeping.
+
+We set the transitions within the Markov chain to represent a transmission or recovery event in the following manner. If the current state of the system is $(n,m)$, then one successful transmission will lead to the state $(n-1,m+1)$. On the other hand, the event of one infected individual recovering will set the state of the system to $(n,m-1)$. Similarly, we observe that both a successful transmission from state $(n+1,m-1)$ or a recovery event from state $(n,m+1)$ will lead to state $(n,m)$.
+
+The rate of change for $P_{n,m}(t)$ is given by the following differential equation:
+
+
+\begin{equation} 
+\label{eq:SIR}
+\begin{split}
+ \dfrac{dP_{n,m}(t)}{dt}=&-\beta nm P_{n,m}(t)+\beta (n+1)(m-1)P_{n+1,m-1}(t)\\
+ &-\gamma m P_{n,m}(t) +\gamma (m+1) P_{n,m+1}(t)
+ \end{split}
+\end{equation}
+
+The expected sojourn time in state $(n,m)$ (provided that $m\neq 0$) equals $(\beta nm +\gamma m)^{-1}$, where $(\beta nm +\gamma m)$ is the rate (and probability per unit of time) of leaving state $(n,m)$. The next possible states are either $(n-1,m+1)$ or $(n,m-1)$, with corresponding transitions obeying the following:
+\medskip
+\begin{itemize}
+    \item The probability of going from state $(n,m)$ to $(n-1,m+1)$ equals $\dfrac{\beta n m}{\beta n m + \gamma m}$.
+    \item The probability of going from state $(n,m)$ to $(n,m-1)$ equals $\dfrac{\gamma m}{\beta n m + \gamma m}$.
+\end{itemize}
+
+\medskip
+Inspired by the above mentioned event-driven transitions, we introduce $Q_{n,m}(\ell)$, which denotes the probability that the $\ell-$event brought the population to state $(n,m)$. This creates a discrete-time Markov chain that follows the recursive relations:
+
+If $m>1$:
+\[Q_{n,m}(l+1)=\dfrac{\beta (n+1)}{\beta (n+1) +\gamma}Q_{n+1,m-1}(l)+\dfrac{\gamma}{\beta (n) +\gamma}Q_{n,m+1}(l).\]
+
+Else, if $m=0,1$:
+\[Q_{n,m}(l+1)=\dfrac{\gamma}{\beta (n) +\gamma}Q_{n,m+1}(l).\]
+
+\subsection{Force of infection}
+In equation \eqref{eq:SIR}, the transmission coefficient $\beta$ was introduced. It is defined as the probability per unit of time that a contact with an infectious individual will lead to successful transmission. This coefficient is assumed to take up a constant value in the simplest modelling framework, although it is a function that depends on the disease-type and the time since infection, among other factors. There is furthermore, the related concept of \textit{force of infection}, defined as the probability per unit of time for a susceptible to become infected, and denoted by $\lambda$. The simplest relation for the force of infection (and that lies within the uniform mixing framework) is the following:
+
+\begin{equation*}
+\label{eq:lambda}
+    \lambda(t)=\beta I(t).
+\end{equation*}
+
+%\noindent
+%which comes as an analog to the law of mass action from chemistry.
+\medskip
+\noindent
+Since the modelling approach in Abrams et al. considers the population as an aggregation of $K$ different age groups, the transmission coefficient will take now the form $\beta(k,k')$, for $k, k'\in K$. Accordingly, the force of infection in this context is expressed as:
+
+
+\begin{equation}
+\label{eq:lambda2}
+    \lambda(k,t)=\sum_{k'=0}^N \beta(k,k') I(t),
+\end{equation}
+
+\noindent
+with $k, \in K$ corresponding to an age group.
+
+It is worth mentioning that the partition of the population into subgroups according to different age ranges will lead to a modelling framework that is different to the case of uniform mixing, as this partition will be used to specify contact behaviour with the use of a contact matrix.
+
+\subsection{Modelling interventions}
+In order to model different types of interventions, we follow Abrams et al.. Firstly, we alter the social contact matrices to reflect a contact reduction in a particular age group. Secondly, we assume that compliance to the interventions is gradual and model this using a logistic compliance function.
+
+\subsubsection{Contact reduction}
+We first consider the imposition of a proportional reduction of work (including transport), school and leisure contacts, by introducing the scaling factors $p_w$, $p_s$ and $p_l\in [0,1]$, respectively. Next (and maybe this is just wishful thinking), we proceed to split up the contact matrix $C$ as $C=C_w+C_s+C_l$, where $C_w$, $C_s$ and $C_l$ are matrices keeping track of work, school and leisure contacts, respectively. 
+
+%reduce (C,p_w, p_s, p_l)
+
+The contact reduction imposition will take the form of a set of functions $\{reduce_i\}_{i\in\{w,s,l\}}$, where:
+
+\begin{equation*}
+\label{eq:reduction}
+reduce_i(C_i,p_i):=p_iC_i,\, i\in{w,s,l}.
+\end{equation*}
+
+
+\section{Relations between chain binomial and ode}
+
+Observe that 
+$\mathbb{E}[I_{t+h}^{new}]=S_t p_1(t)$ and consider the system
+\begin{align}
+\label{eq:difference_equations}
+    \vec{S}_{t+h} = {} & \vec{S}_{t} - \mathbb{E}[\vec{I}_{t+h}^{new}], \\
+    \vec{I}_{t+h} = {} & \vec{I}_{t} + \mathbb{E}[\vec{I}_{t+h}^{new}] - \mathbb{E}[\vec{R}_{t+h}^{new}], \\
+    \vec{R}_{t+h} = {} & \vec{R}_{t} + \mathbb{E}[\vec{R}_{t+h}^{new}]. 
+    \label{eq:difference_equationsnext}
+\end{align}
+
+
+Working out \eqref{eq:difference_equations} with the identity $\exp(x)=\sum_{k=0}^{\infty}\left(\dfrac{x^k}{k!}\right)$ yields the following
+
+\begin{equation*}
+    \begin{split}
+    \vec{S}_{t+h}-\vec{S}_{t} = {} & -\mathbb{E}[\vec{I}_{t+h}^{new}]\\
+    ={}&-p_1(t)\vec{S}_{t}\\
+    ={}&(\exp(-h\beta I_t))-1)\vec{S}_{t}\\
+    ={}&\sum_{k=1}^{\infty}\dfrac{(-h\beta I_t)^k}{k!}\vec{S}_{t}\\
+    ={}&\sum_{k=2}^{\infty}\dfrac{(-h\beta I_t)^k}{k!}\vec{S}_{t}-h\beta I_t S_t,
+    \end{split}\end{equation*}
+
+and thus
+\begin{equation}
+\label{eq:cauchy}
+\dfrac{\vec{S}_{t+h}-\vec{S}_{t}}{h}=\sum_{k=2}\dfrac{(-h)^{k-1}(\beta I_t)^{k}}{k!}\vec{S}_{t}-\beta I_t S_t.
+\end{equation}
+
+By taking the limit $h\rightarrow{0}$ in \eqref{eq:cauchy}, the relation $dS/dt =  -\beta SI$ is retrieved. We can conclude that the system \eqref{eq:difference_equations}-\eqref{eq:difference_equationsnext} solves the deterministic $SIR$ when $h\rightarrow{0}$. 
+
+
+\bibliographystyle{alpha}
+\bibliography{refs}
+
+
+
+
+
+
+
+\end{document}
+

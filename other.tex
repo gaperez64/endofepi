@@ -1,0 +1,35 @@
+%reduce (C,p_w, p_s, p_l)
+
+The effect of this  , a value of $p_l=1/2$ 
+
+Related to this, we consider three different kinds of actions, $A_w$, $A_s$ and $A_l$, that act on the previously mentioned constants, respectively. 
+
+
+
+At
+timestep t, the action at = (awt , ast , alt ) impacts the model dynamics by applying
+the contact reduction function reduce(C, awt , ast , alt ) for each age group.
+
+
+
+
+
+\section{The Markov decision process}
+
+We refer to a Markov chain process as an $MDP$.
+
+The states of the $MDP$ are given by $(S,E,I,D,R,C)$.
+
+We consider three different sets of actions, $A_w$, $A_s$ and $A_l$ that impact the values of $p_w$, $p_s$, $p_l$ respectively. The action-space of the MDP is then $A ={Aw,As,Al}$. Since $p_w$, $p_s$, $p_l$ are continuous variables in $[0, 1]$, we consider $A_w$, $A_s$, $A_l \in [0, 1]$.
+
+
+
+Alternatively, we can discretize the continuous action-space
+by only considering a finite subset of values for Aw,As,Al such as for example
+{0, 0.2, . . . , 1}. This would result in 63 different possible actions for A. At
+timestep t, the action at = (awt , ast , alt ) impacts the model dynamics by applying
+the contact reduction function reduce(C, awt , ast , alt ) for each age group
+
+
+
+\end{document}
