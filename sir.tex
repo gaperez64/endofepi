@@ -55,10 +55,15 @@
     
     \textit{We could maybe draw a parallelism with the use of the basic ode governing SIR dynamics in large populations.}
     \item Mention examples of other exact algorithms for SIR models.
-    
+    \begin{itemize}
+        \item \cite{KEELING2009133} discusses a method to efficiently calculate stationary distributions for one-dimensional continuous-time Markov chains with medium to large state spaces.
+    \end{itemize}
     \textit{The books of Bailey and Allen discuss the termination time for the simpler Reed-Frost and Greenwood models. They do so by deriving probability generating functions.} 
     \item \dots
 \end{itemize}
+
+Other discrete-time Markovian models: The Reed-Frost and Greenwood models -referred to as \textit{chain-binomial models}- assume a constant generation interval through the population, which allows for an interesting derivation of model features such as the probability generating function for the epidemic duration (cite Bailey).  
+
 
 \section{Markov Chains}
 \todo[inline]{G: add some preliminaries}
@@ -104,12 +109,12 @@ The integral
 
 becomes the cumulative force of infection over $(t,t+h]$. By taking the Taylor expansion of \eqref{eq:cumulativeforce} about $t$ and considering expressions \eqref{eq:lawofmassaction}, \eqref{eq:expectedinS} together, the following holds
 
-\begin{align*} 
+\begin{align} 
 \label{eq:expectedinS}
         S(t+h)&=e^{-\int_{t}^{t+h} \beta I(\tau)d\tau}S(t)\\
         &=e^{-\beta(\int_{t}^{t}I(\tau)d\tau+hI(t)+\mathcal{O}( h^2))}S(t)\\
         &\approx e^{-h\beta I(t)}S(t),\text{ for $h$ small.}   
-\end{align*}
+\end{align}
 
 The probability $p_1(t)=1-e^{-h\beta I(t)}$ will now be regarded as the success probability  for the Bernoulli trial corresponding to an interaction between an infectious and a susceptible individual, and the interaction occurs within $(t,t+h]$\footnote{Abrams et al. \cite{abrams21} take the value $h=1/24$, explain why.}. By recalling the assumption of uniform mixing, the discussion of this section can be summarized with the following relation
 
@@ -125,7 +130,7 @@ To finish this modelling part, the infectious period $\Delta(t)$ is assumed to b
     \vec{R}_{t+h}^{new}\sim B(\vec{I}_t, p_2=1-\exp(-h\gamma)).
 \end{equation}
 
-The expressions \eqref{eq:CBI} and \eqref{eq:CBR} yield the \textit{chain-binomial model}, to be introduced in the next section.
+The expressions \eqref{eq:CBI} and \eqref{eq:CBR} yield the \textit{Markovian SIR model}, to be introduced in the next section.
 
 
 \begin{figure}[t]
@@ -147,14 +152,14 @@ individuals will recover over time.}
 
 \section{Discrete-Time Stochastic Epidemic Model}
 
-Our \textit{chain-binomial model}, is now introduced based on the previously described infection and recovery events. The model takes the form of a discrete-time stochastic process 
+Our \textit{Markovian SIR model}, is now introduced based on the previously described infection and recovery events. The model takes the form of a discrete-time stochastic process 
 
 \begin{equation}
 \label{eq:SIRmodel}
-  \{X_{t} \mbox{, }t=0,h,2h,\ldots\}=\{(\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots\},  
+  (X_{t} \mbox{, }t=0,h,2h,\ldots)=((\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots),  
 \end{equation}
 
-where the sequence of random variables $\{(\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t})\}$ is defined recursively as follows
+where the sequence of random variables $((\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}))$ is defined recursively as follows
 \begin{align}
 \label{eq:difference_equations}
     \vec{S}_{t+h} = {} & \vec{S}_{t} - \vec{I}_{t+h}^{new}, \\
@@ -163,12 +168,12 @@ where the sequence of random variables $\{(\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}
 \label{eq:difference_equations_again}
 \end{align}
 %
-and $\vec{I}_{t+h}^{new}$ and $\vec{R}_{t+h}^{new}$ are obtained from \eqref{eq:CBI} and \eqref{eq:CBR}, respectively. Observe that $\{X_{t}\}$ satisfies the \textit{conservative} condition $\vec{S}_t+\vec{I}_t+\vec{R}_t=N$, for $t=0,h,2h,\ldots$ Furthermore, $\{X_{t}\}$ satisfies the \textit{memory-less} property, i.e., the state of the system at time $t+h$ only depends on the state of the system at time $t$, and thus $\{X_{t}\}$ is a discrete-time Markov Chain $\mathcal{C}$. The terms for the corresponding
+and $\vec{I}_{t+h}^{new}$ and $\vec{R}_{t+h}^{new}$ are obtained from \eqref{eq:CBI} and \eqref{eq:CBR}, respectively. Observe that $(X_{t})$ satisfies the \textit{conservative} condition $\vec{S}_t+\vec{I}_t+\vec{R}_t=N$, for $t=0,h,2h,\ldots$ Furthermore, $(X_{t})$ satisfies the \textit{memory-less} property, i.e., the state of the system at time $t+h$ only depends on the state of the system at time $t$, and thus $(X_{t})$ is a discrete-time Markov Chain $\mathcal{C}$. The terms for the corresponding
 probability transition matrix $P$ will now be derived. It will be convenient to write $P(\vec{m},\vec{n})$ to denote the entry of $P$ corresponding to the probability of transitioning from state $\vec{m}$ to $\vec{n}$.
 
 
 
-First note that the Markov chain \eqref{eq:SIRmodel} can be simplified to $\{(\vec{S}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots\}$, since $\vec{I}_{t}$ can be (deterministically) obtained as $\vec{I}_{t}=N-\vec{S}_{t}-\vec{R}_{t}$. In the following, we will construct the joint probability mass function of $\vec{S}_{t}$ and $\vec{R}_{t}$. Taking \eqref{eq:difference_equations} and \eqref{eq:CBI} together, the probability mass function  $p_S$ corresponding to $\vec{S}_{t}$ is obtained as follows
+First note that the Markov chain \eqref{eq:SIRmodel} can be simplified to $((\vec{S}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots)$, since $\vec{I}_{t}$ can be (deterministically) obtained as $\vec{I}_{t}=N-\vec{S}_{t}-\vec{R}_{t}$. In the following, we will construct the joint probability mass function of $\vec{S}_{t}$ and $\vec{R}_{t}$. Taking \eqref{eq:difference_equations} and \eqref{eq:CBI} together, the probability mass function  $p_S$ corresponding to $\vec{S}_{t}$ is obtained as follows
 
 \begin{equation}
 \begin{split}
@@ -191,14 +196,14 @@ p_R(n_3)=&P(\vec{R}_{t+h}=n_3 \mid \vec{I}_{t}=m_2 \mbox{, } \vec{R}_{t}=m_3)\\
 =& {\binom{m_2}{n_3-m_3}}(1-\exp(-h\gamma))^{n_3-m_3}\exp(-h\gamma)^{m_2-n_3+m_3},      
 \end{split}
 \end{equation}
-for $n_3-m_3=0,1,\ldots,m_2$. Observe from \eqref{eq:Spmf} and \eqref{eq:Rpmf} that $\vec{S}_{t}$ and $\vec{R}_{t}$ are independent\footnote{Recall that if $X$ and $Y$ are independent then $P(X= x,Y= y)=P(X= x)P(Y= y)=p_{X}(x)p_{Y}(y)$ for $x,y$ in the sample space.}, and thus, the joint probability mass function $p_{SR}$ of $\vec{S}_{t}$ and $\vec{R}_{t}$ is given by
+for $n_3-m_3=0,1,\ldots,m_2$. Observe from \eqref{eq:Spmf} and \eqref{eq:Rpmf} that $\vec{S}_{t}$ and $\vec{R}_{t}$ are independent\footnote{Recall that if $X$ and $Y$ are independent then $P(X= x,Y= y)=P(X= x)P(Y= y)=p_{X}(x)p_{Y}(y)$, for $x,y$ in the sample space.}, and thus, the joint probability mass function $p_{SR}$ of $\vec{S}_{t}$ and $\vec{R}_{t}$ is given by
 %
 \begin{equation}
 \label{eq:jpmf} 
 p_{SR}(n_1,n_3)=p_S(n_1)p_R(n_3).    
 \end{equation}
 %
-Note that the probability transition matrix $P$ of the Markov chains $\{\vec{S}_{t},\vec{R}_{t}\}$ and $\{\vec{S}_{t},\vec{I}_{t}, \vec{R}_{t}\}$ is given by $p_{SR}$. That is,  
+Note that the probability transition matrix $P$ of the Markov chains $((\vec{S}_{t},\vec{R}_{t}))$ and $((\vec{S}_{t},\vec{I}_{t}, \vec{R}_{t}))$ is given by $p_{SR}$. That is,  
 for any $\vec{n}=(n_1,N-n_1-n_3,n_3)$ and $\vec{m}=(m_1,m_2,m_3)$ such that $n_1=0,1,\ldots,m_1$ and $n_3-m_3=0,1,\ldots,m_2$ we have the following
 \begin{equation}
 \label{eqn:finalform}
@@ -242,8 +247,26 @@ To conclude this section we state the following property which follows immediate
 %\[P({\vec{m},\vec{n}})=\mathbb{P}\left( \bigcap_{i=1}^{3}A_{i}\right),\]
 %where $\mathbb{P}=P_{\mathcal{C}}$ is the probabilistic function induced by our Markov chain. Therefore, it is enough to compute each of the terms on the r.h.s. of equation \eqref{eq:intersection_probability} in order the get $P({\vec{m},\vec{n}})$. This defines the procedure that follows next.
 
+\medskip
+Let $(a_n)$ be a sequence that does not contain an absorbent state. Note that the probability for $(a_n)$ to occur is given by an infinite product $\Pi p_ {ij}$, where $p_ {ij}$ are transition probabilities, and 
+$0<p_ {ij}\leq \max p_ {ij}<1$. Note that the last inequality holds, since if $p_ {ij}=1$, then $j=i$ and $i$ is in the set of absorbent states $A$. Let $x=\max p_ {ij}$, then 
+
+\begin{equation}
+\label{eq:sandwich}
+ 0<\Pi p_ {ij} <\lim_{k \rightarrow \infty} x^{k}.   
+\end{equation}
 
 
+We will argue that $x^k \rightarrow 0$ as $k \rightarrow \infty$. First observe that $x^{k+1}<x^k$, since $0<x<1$. Therefore, $x^k \rightarrow \ell$, with $0 \leq \ell <1$, by Zorn's lemma. Suppose $0 < \ell$, then $\ell \cdot x < \ell$, i. e., $(\lim_{k \rightarrow \infty} x^k)x<\ell$. As the limit is a continuous function, $(\lim_{k \rightarrow \infty} x^k)x=\lim_{k \rightarrow \infty} x^{k+1}$ holds. On the other hand, $\lim_{k \rightarrow \infty} x^{k+1}=\lim_{k \rightarrow \infty} x^{k}$, implying $\ell < \ell$, which is a contradiction. Therefore, $\ell=0$, which together with \eqref{eq:sandwich} imply that $\Pi p_ {ij}=0$, and thus, any sequence with no absorbent state has probability zero of occurrence. Now, the axioms of probability yield the following inequalities 
+
+\begin{equation}
+\label{eq:prob_bound}
+ 0\leq P\{(a_n) \mid (a_n) \cap A=\emptyset \}\leq \sum_{(a_n):(a_n) \cap A=\emptyset} P((a_n)),   
+\end{equation}
+
+
+\noindent
+where $A$ is the set of absorbing states. The discussion of the previous paragraph implies that $\sum_{(a_n):(a_n) \cap A=\emptyset} P((a_n))=0$, and we can conclude from \eqref{eq:prob_bound} that $P\{(a_n) \mid (a_n) \cap A=\emptyset \}=0$ (or equivalently $P\{(a_n) \mid (a_n) \cap A \neq \emptyset \}=1$). 
 
 
 \section{The Expected Epidemic End Time}
@@ -444,7 +467,7 @@ Based on \Cref{lem:recrel}, we propose \Cref{alg:probs} to compute $P(\vec{m},\v
                 \State $X(\vec{m},\vec{n}) \gets P(\vec{m},\vec{n})$, with $\vec{n}=(n_1,N-n_1-m_3,m_3)$\label{loc:fixn3}
               \EndFor
               \For{$n_3 = m_3+1, \dots, m_2+m_3$}\label{loc:reccomp-start}
-                  \For{$n_1 = 0, \dots, m_1-1$}
+                  \For{$n_1 = 0, \dots, m_1-1$}\label{loc:reccomp-n1}
                      \State $\vec{n} \gets (n_1,N-n_1-n_3,n_3)$
                      \State $\vec{m'} \gets (m_1-1,m_2,m_3+1)$
                      \State $X(\vec{m},\vec{n}) \gets \alpha(\vec{m},\vec{n})X(\vec{m'},\vec{n})$
@@ -455,7 +478,7 @@ Based on \Cref{lem:recrel}, we propose \Cref{alg:probs} to compute $P(\vec{m},\v
     \end{algorithmic}
 \end{algorithm}
 
-As with \Cref{alg:simple}, we observe that \Cref{alg:probs} clearly terminates because all for-loops are bounded and there are no jump statements in the code. Regarding the time complexity of \Cref{alg:probs}, however, we now only ever nest at most $4$ for-loops and $P(\vec{m},\vec{n})$ is never used (i.e. computed) in an innermost loop.
+As with \Cref{alg:simple}, we observe that \Cref{alg:probs} clearly terminates because all for-loops are bounded and there are no jump statements in the code. Regarding the time complexity of \Cref{alg:probs}, however, we now only ever nest at most $4$ for-loops and $P(\vec{m},\vec{n})$ is never used (i.e. computed) within a for-loop nesting of depth $4$.
 \begin{theorem}[Complexity]
     The worst-case time complexity of \Cref{alg:probs} is $O(N^4)$.
 \end{theorem}
@@ -467,7 +490,7 @@ For correctness, we have the following statement.
 \begin{proof}
     First, one needs to take care that the previous transition probabilities must be defined before they are being used. Note that this is only relevant in lines \ref{loc:reccomp-start}--\ref{loc:reccomp-end}. It thus follows from the order in which the states $\vec{m}$ are traversed that $X(\vec{m'},\vec{n})$ has already been computed in a previous iteration.
     
-    Now, it is easy to see that $X(\vec{m},\vec{n}) = P(\vec{m},\vec{n})$ if either $m_1 = n_1$ or $m_3 = n_3$ since lines \ref{loc:fixn1} and \ref{loc:fixn3} literally assign the right-hand side to the left-hand side of the equality. If neither equality holds, then $X(\vec{m},\vec{n})$ is computed in the loop \ref{loc:reccomp-start}--\ref{loc:reccomp-end} and $X(\vec{m},\vec{n}) = P(\vec{m},\vec{n})$ by \Cref{lem:recrel}.\qed
+    Now, it is easy to see that $X(\vec{m},\vec{n}) = P(\vec{m},\vec{n})$ if either $m_1 = n_1$ or $m_3 = n_3$ since lines \ref{loc:fixn1} and \ref{loc:fixn3} literally assign the right-hand side to the left-hand side of the equality. If neither equality holds, then $X(\vec{m},\vec{n})$ is computed in the loop \ref{loc:reccomp-start}--\ref{loc:reccomp-end} and $X(\vec{m},\vec{n}) = P(\vec{m},\vec{n})$ by \Cref{lem:recrel}. Indeed, the conditions that $n_1 < m_1$ and $m_3 < n_3$ are guaranteed by values over which $n_3$ and $n_1$ range in the loops from lines \ref{loc:reccomp-start} and \ref{loc:reccomp-n1}.\qed
 \end{proof}
 
 Together with the theorems regarding \Cref{alg:simple}, the above imply the following.
@@ -475,16 +498,15 @@ Together with the theorems regarding \Cref{alg:simple}, the above imply the foll
     \Cref{alg:simple}, when pre-computing $P(\vec{m},\vec{n})$ using \Cref{alg:probs}, computes $\Ex^{\vec{m}}[\htime]$ for all states $\vec{m}$ in time $O(N^4)$.
 \end{theorem}
 
-\section{Relations between chain binomial and ode}
+\section{Relations between Markovian and deterministic SIR models.}
 
 Observe that 
 $\mathbb{E}[I_{t+h}^{new}]=S_t p_1(t)$ and consider the system
+
 \begin{align}
-\label{eq:difference_equations}
-    \vec{S}_{t+h} = {} & \vec{S}_{t} - \mathbb{E}[\vec{I}_{t+h}^{new}], \\
-    \vec{I}_{t+h} = {} & \vec{I}_{t} + \mathbb{E}[\vec{I}_{t+h}^{new}] - \mathbb{E}[\vec{R}_{t+h}^{new}], \\
-    \vec{R}_{t+h} = {} & \vec{R}_{t} + \mathbb{E}[\vec{R}_{t+h}^{new}]. 
-    \label{eq:difference_equationsnext}
+    \vec{S}_{t+h} = {} & \vec{S}_{t} - \mathbb{E}[\vec{I}_{t+h}^{new}], \label{eq:esperanzaS}\\
+    \vec{I}_{t+h} = {} & \vec{I}_{t} + \mathbb{E}[\vec{I}_{t+h}^{new}] - \mathbb{E}[\vec{R}_{t+h}^{new}],\label{eq:esperanzaI}\\
+    \vec{R}_{t+h} = {} & \vec{R}_{t} + \mathbb{E}[\vec{R}_{t+h}^{new}]. \label{eq:esperanzaR}
 \end{align}
 
 
@@ -505,7 +527,7 @@ and thus
 \dfrac{\vec{S}_{t+h}-\vec{S}_{t}}{h}=\sum_{k=2}\dfrac{(-h)^{k-1}(\beta I_t)^{k}}{k!}\vec{S}_{t}-\beta I_t S_t.
 \end{equation}
 
-By taking the limit $h\rightarrow{0}$ in \eqref{eq:cauchy}, the relation $dS/dt =  -\beta SI$ is retrieved. We can conclude that the system \eqref{eq:difference_equations}-\eqref{eq:difference_equationsnext} solves the deterministic $SIR$ when $h\rightarrow{0}$. 
+By taking the limit $h\rightarrow{0}$ in \eqref{eq:cauchy}, the relation $dS/dt =  -\beta SI$ is retrieved. A similar treatment can be repeated for equations \eqref{eq:esperanzaI} and \eqref{eq:esperanzaR}, and we can conclude that the system \eqref{eq:esperanzaS}-\eqref{eq:esperanzaR} solves the deterministic $SIR$ when $h\rightarrow{0}$. This result comes as no surprise, since our Markovian SIR model builds on top of relation \eqref{eq:expectedinS}, when addressing $\vec{S}_{t+h}$ as an expected value.
 
 \section*{Acknowledgments}
 We would like to thank Kasper Engelen for proof-reading the article and the code of our implementation.

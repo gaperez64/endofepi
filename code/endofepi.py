@@ -22,7 +22,7 @@ class Model:
         self.compExphgamma = 1 - self.exphgamma
         self.knownP = dict()
 
-    def expensiveP(self, m, n):
+    def P(self, m, n):
         if (m, n) in self.knownP:
             return self.knownP[(m, n)]
         (m1, m2, m3) = m
@@ -64,11 +64,11 @@ class Model:
                 # The case of n1 = m1
                 for n3 in range(m3, m2 + m3 + 1):
                     n = (m1, self.popSize - m1 - n3, n3)
-                    self.expensiveP(m, n)
+                    self.P(m, n)
                 # The case of n3 = m3
                 for n1 in range(0, m1 + 1):
                     n = (n1, self.popSize - m3 - n1, m3)
-                    self.expensiveP(m, n)
+                    self.P(m, n)
                 # All other cases
                 for n3 in range(m3 + 1, m2 + m3 + 1):
                     for n1 in range(0, m1):
@@ -76,6 +76,29 @@ class Model:
                         mm = (m1 - 1, m2, m3 + 1)
                         self.knownP[(m, n)] = alpha(m, n) * \
                             self.knownP[(mm, n)]
+
+    def endOfPandemic(self):
+        val = dict()
+        # initialization
+        for m1 in range(self.popSize + 1):
+            m = (m1, 0, self.popSize - m1)
+            val[m] = 0
+        for M in range(1, self.popSize + 1):
+            for m2 in reversed(range(1, M + 1)):
+                m1 = M - m2
+                m3 = self.popSize - M
+                m = (m1, m2, m3)
+                val[m] = 1
+                for n3 in range(m3, m2 + m3 + 1):
+                    for n1 in range(m1 + 1):
+                        n2 = self.popSize - (n1 + n3)
+                        n = (n1, n2, n3)
+                        if m != n:
+                            val[m] += self.P(m, n) * val[n]
+                # normalize because of self loops
+                val[m] /= 1 - self.P(m, m)
+        # return the full dictionary
+        return val
 
 
 # Set up argument parsing for this file when called as a script instead of a
@@ -96,6 +119,7 @@ if __name__ == "__main__":
               h=args.time_step,
               beta=args.infection_rate,
               gamma=args.recovery_rate)
-    print(m.expensiveP((1, 1, 8), (1, 0, 9)))
     m.prepAllP()
+    val = m.endOfPandemic()
+    print(val[(args.population_size - 1, 1, 0)])
     exit(0)
