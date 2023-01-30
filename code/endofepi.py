@@ -4,7 +4,8 @@
 End of Epidemic computes the expected end of the epidemic
 for a discrete-time stochastic epidemic model
 
-author: Guillermo A. Perez, guillermo.perez@uantwerpen.be
+authors: Guillermo A. Perez, guillermo.perez@uantwerpen.be
+         Alejandro Alarcon, alejandrojavier.alarcongonzalez@uantwerpen.be
 """
 
 import argparse
@@ -22,19 +23,35 @@ class Model:
         self.compExphgamma = 1 - self.exphgamma
         self.knownP = dict()
 
+    def sim(self, m):
+        (m1, m2, m3) = m
+        varlambda = self.beta * m2
+        pStar = 1 - np.exp(-self.h * varlambda)
+        Inew = np.random.binomial(m1, pStar)
+        Rnew = np.random.binomial(m2, self.compExphgamma)
+
+        # Compartmental updating rules
+        n1 = m1 - Inew
+        n2 = m2 + Inew - Rnew
+        n3 = m3 + Rnew
+        n = (n1, n2, n3)
+        assert sum(n) == self.popSize
+        return n
+
     def P(self, m, n):
         if (m, n) in self.knownP:
-            return self.knownP[(m, n)]
-        (m1, m2, m3) = m
-        (n1, n2, n3) = n
-        p = sp.binom(m1, m1 - n1)
-        p *= np.exp(-self.h * self.beta * m2 * n1)
-        if m1 - n1 > 0:
-            p *= np.power(1 - np.exp(-self.h * self.beta * m2), m1 - n1)
-        p *= sp.binom(m2, n3 - m3)
-        p *= np.power(self.compExphgamma, n3 - m3)
-        p *= np.power(self.exphgamma, m2 - n3 + m3)
-        self.knownP[(m, n)] = p
+            p = self.knownP[(m, n)]
+        else:
+            (m1, m2, m3) = m
+            (n1, n2, n3) = n
+            p = sp.binom(m1, m1 - n1)
+            p *= np.exp(-self.h * self.beta * m2 * n1)
+            if m1 - n1 > 0:
+                p *= np.power(1 - np.exp(-self.h * self.beta * m2), m1 - n1)
+            p *= sp.binom(m2, n3 - m3)
+            p *= np.power(self.compExphgamma, n3 - m3)
+            p *= np.power(self.exphgamma, m2 - n3 + m3)
+            self.knownP[(m, n)] = p
         return p
 
     def prepAllP(self):
@@ -61,6 +78,7 @@ class Model:
                 m1 = M - m2
                 m3 = self.popSize - M
                 m = (m1, m2, m3)
+                assert sum(m) == self.popSize
                 # The case of n1 = m1
                 for n3 in range(m3, m2 + m3 + 1):
                     n = (m1, self.popSize - m1 - n3, n3)
@@ -68,12 +86,14 @@ class Model:
                 # The case of n3 = m3
                 for n1 in range(0, m1 + 1):
                     n = (n1, self.popSize - m3 - n1, m3)
+                    assert sum(n) == self.popSize
                     self.P(m, n)
                 # All other cases
                 for n3 in range(m3 + 1, m2 + m3 + 1):
                     for n1 in range(0, m1):
                         n = (n1, self.popSize - n1 - n3, n3)
                         mm = (m1 - 1, m2, m3 + 1)
+                        assert sum(mm) == self.popSize
                         self.knownP[(m, n)] = alpha(m, n) * \
                             self.knownP[(mm, n)]
 
@@ -82,21 +102,24 @@ class Model:
         # initialization
         for m1 in range(self.popSize + 1):
             m = (m1, 0, self.popSize - m1)
+            assert sum(m) == self.popSize
             val[m] = 0
         for M in range(1, self.popSize + 1):
             for m2 in reversed(range(1, M + 1)):
                 m1 = M - m2
                 m3 = self.popSize - M
                 m = (m1, m2, m3)
+                assert sum(m) == self.popSize
                 val[m] = 1
                 for n3 in range(m3, m2 + m3 + 1):
                     for n1 in range(m1 + 1):
                         n2 = self.popSize - (n1 + n3)
                         n = (n1, n2, n3)
+                        assert sum(n) == self.popSize
                         if m != n:
                             val[m] += self.P(m, n) * val[n]
                 # normalize because of self loops
-                val[m] /= 1 - self.P(m, m)
+                val[m] /= (1 - self.P(m, m))
         # return the full dictionary
         return val
 
