@@ -56,7 +56,9 @@
     \textit{We could maybe draw a parallelism with the use of the basic ode governing SIR dynamics in large populations.}
     \item Mention examples of other exact algorithms for SIR models.
     \begin{itemize}
+        \item \cite{BLACK2015159} work out an exact computation of the final size distribution, by addressing the epidemic as a counting process, introducing variables for counting infection and recovery events. The difference with this representation is that for them, the random variables can only ever increase, whereas in our representation, the random variables can increase, stay the same or decrease. Moreover, they also use the hitting probabilities approach.
         \item \cite{KEELING2009133} discusses a method to efficiently calculate stationary distributions for one-dimensional continuous-time Markov chains with medium to large state spaces.
+        \item \cite{keeling2008methods} provide exact methods for evaluating the expected duration of a  continuous-time Markovian epidemic model. They use a matrix formulation to describe dynamics.
     \end{itemize}
     \textit{The books of Bailey and Allen discuss the termination time for the simpler Reed-Frost and Greenwood models. They do so by deriving probability generating functions.} 
     \item \dots
@@ -155,8 +157,8 @@ individuals will recover over time.}
 Our \textit{Markovian SIR model}, is now introduced based on the previously described infection and recovery events. The model takes the form of a discrete-time stochastic process 
 
 \begin{equation}
-\label{eq:SIRmodel}
-  (X_{t} \mbox{, }t=0,h,2h,\ldots)=((\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots),  
+\label{eq:MarkovianSIR}
+  (X_{t} \mid t=0,h,2h,\ldots)=((\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}) \mid t=0,h,2h,\ldots),  
 \end{equation}
 
 where the sequence of random variables $((\vec{S}_{t}, \vec{I}_{t}, \vec{R}_{t}))$ is defined recursively as follows
@@ -173,7 +175,7 @@ probability transition matrix $P$ will now be derived. It will be convenient to 
 
 
 
-First note that the Markov chain \eqref{eq:SIRmodel} can be simplified to $((\vec{S}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots)$, since $\vec{I}_{t}$ can be (deterministically) obtained as $\vec{I}_{t}=N-\vec{S}_{t}-\vec{R}_{t}$. In the following, we will construct the joint probability mass function of $\vec{S}_{t}$ and $\vec{R}_{t}$. Taking \eqref{eq:difference_equations} and \eqref{eq:CBI} together, the probability mass function  $p_S$ corresponding to $\vec{S}_{t}$ is obtained as follows
+First note that the Markov chain \eqref{eq:MarkovianSIR} can be simplified to $((\vec{S}_{t}, \vec{R}_{t}) \mbox{, }t=0,h,2h,\ldots)$, since $\vec{I}_{t}$ can be (deterministically) obtained as $\vec{I}_{t}=N-\vec{S}_{t}-\vec{R}_{t}$. In the following, we will construct the joint probability mass function of $\vec{S}_{t}$ and $\vec{R}_{t}$. Taking \eqref{eq:difference_equations} and \eqref{eq:CBI} together, the probability mass function  $p_S$ corresponding to $\vec{S}_{t}$ is obtained as follows
 
 \begin{equation}
 \begin{split}
@@ -247,17 +249,23 @@ To conclude this section we state the following property which follows immediate
 %\[P({\vec{m},\vec{n}})=\mathbb{P}\left( \bigcap_{i=1}^{3}A_{i}\right),\]
 %where $\mathbb{P}=P_{\mathcal{C}}$ is the probabilistic function induced by our Markov chain. Therefore, it is enough to compute each of the terms on the r.h.s. of equation \eqref{eq:intersection_probability} in order the get $P({\vec{m},\vec{n}})$. This defines the procedure that follows next.
 
-\medskip
-Let $(a_n)$ be a sequence that does not contain an absorbent state. Note that the probability for $(a_n)$ to occur is given by an infinite product $\Pi p_ {ij}$, where $p_ {ij}$ are transition probabilities, and 
+\todo[inline]{Write formal claim about the end of the epidemic being reached with probability 1 (not true: there's probability zero of reaching it in infinite time), what's below is a proof... although, in finite Markov chains don't we always end up in the absorbing states with probability 1? Not true: think about cycles.}
+
+This section ends with a probabilistic discussion on the end of the epidemic. It will be first argued that there is a zero probability for the model \eqref{eq:MarkovianSIR} to do not reach the absorbing set or to take an infinite number of steps before reaching it. Finally, it will be shown that the number of Markov chain realizations with positive probability of occurring is reduced to a finite set of finite chains, which will in turn allow for the consideration of the \textit{mean hitting times}. A realization of the Markov chain \eqref{eq:MarkovianSIR} will be denoted by the sequence $(a_n)$, for the sake of simplicity.
+
+Let $(a_n)$ be a sequence that does not contain an absorbent state. Note that the probability for $(a_n)$ to occur is given by an infinite product $\prod p_ {ij}$, where $p_ {ij}$ are transition probabilities, and 
 $0<p_ {ij}\leq \max p_ {ij}<1$. Note that the last inequality holds, since if $p_ {ij}=1$, then $j=i$ and $i$ is in the set of absorbent states $A$. Let $x=\max p_ {ij}$, then 
 
 \begin{equation}
 \label{eq:sandwich}
- 0<\Pi p_ {ij} <\lim_{k \rightarrow \infty} x^{k}.   
+ 0 \leq \prod^{\infty} p_ {ij} <  x^{k}, \mbox{ for }k=0,1,2,\ldots.   
 \end{equation}
 
 
-We will argue that $x^k \rightarrow 0$ as $k \rightarrow \infty$. First observe that $x^{k+1}<x^k$, since $0<x<1$. Therefore, $x^k \rightarrow \ell$, with $0 \leq \ell <1$, by Zorn's lemma. Suppose $0 < \ell$, then $\ell \cdot x < \ell$, i. e., $(\lim_{k \rightarrow \infty} x^k)x<\ell$. As the limit is a continuous function, $(\lim_{k \rightarrow \infty} x^k)x=\lim_{k \rightarrow \infty} x^{k+1}$ holds. On the other hand, $\lim_{k \rightarrow \infty} x^{k+1}=\lim_{k \rightarrow \infty} x^{k}$, implying $\ell < \ell$, which is a contradiction. Therefore, $\ell=0$, which together with \eqref{eq:sandwich} imply that $\Pi p_ {ij}=0$, and thus, any sequence with no absorbent state has probability zero of occurrence. Now, the axioms of probability yield the following inequalities 
+
+We will argue that $x^k \rightarrow 0$ as $k \rightarrow \infty$. First, note that $x^{k+1}<x^k$, since $0<x<1$. Observe also that $(x^k) \subset [0,1]$. These two properties, namely, monotonicity and boundedness, ensures\footnote{Recall that if $(a_n)$ is monotonically decreasing, then $(a_n)$ converges if and only if it has a lower bound. For further details, consult an introductory analysis textbook, such as \cite{BabyRudin}.} that $(x^k)$ converges to its infimum $\ell$, with $0 \leq \ell <1$. Suppose $0 < \ell$, then $\ell \cdot x < \ell$, i.e., $(\lim_{k \rightarrow \infty} x^k)x<\ell$. As the limit is a continuous function, $(\lim_{k \rightarrow \infty} x^k)x=\lim_{k \rightarrow \infty} x^{k+1}$ holds. On the other hand, $\lim_{k \rightarrow \infty} x^{k+1}=\lim_{k \rightarrow \infty} x^{k}$, implying $\ell < \ell$, which is a contradiction. Therefore, $\ell=0$, which together with \eqref{eq:sandwich} imply that $\Pi p_ {ij}=0$, and thus, any sequence with no absorbent state has probability zero of occurrence. 
+
+Now, the axioms of probability yield the following inequalities
 
 \begin{equation}
 \label{eq:prob_bound}
@@ -268,6 +276,19 @@ We will argue that $x^k \rightarrow 0$ as $k \rightarrow \infty$. First observe 
 \noindent
 where $A$ is the set of absorbing states. The discussion of the previous paragraph implies that $\sum_{(a_n):(a_n) \cap A=\emptyset} P((a_n))=0$, and we can conclude from \eqref{eq:prob_bound} that $P\{(a_n) \mid (a_n) \cap A=\emptyset \}=0$ (or equivalently $P\{(a_n) \mid (a_n) \cap A \neq \emptyset \}=1$). 
 
+Using the same argument, it can be seen that any sequence $(a_n)$ taking an infinite time to reach an absorbing state has zero probability of occurrence. 
+
+\begin{lemma}\label{lem:zero_infty}
+    Realizations of the Markov chain \eqref{eq:MarkovianSIR} with infinite length have a zero probability of occurring. 
+    
+\end{lemma}
+
+
+
+
+The last possibility to address is the case of sequences $(a_n)$ taking a finite time to reach an absorbing state. Note that the probability for $(a_n)$ to occur is given by a finite product $\prod p_ {ij}$, of transition probabilities $p_ {ij}>0$, implying that $\prod p_ {ij}>0$. We can conclude then that only these last finite sequences $(a_n)$ have a positive probability of occurring. 
+
+The discussion is rounded off with the observation that given the order relation (I need to write it down again), there are only a finite number of finite sequences if the state space is finite, and thus the expected time for the Markov chain (starting off from a given state $m$) to reach the absorbing set is finite.  
 
 \section{The Expected Epidemic End Time}
 In this section we are interested in computing the expected \emph{hitting
@@ -293,6 +314,8 @@ following.
     \]
     where $\vec{n} = (n_1,N-n_1-n_3,n_3)$.
 \end{lemma}
+
+\todo[inline]{Add corollary from lemma 2 that the expected end of epidemic is in fact finite}
 
 Note that the above lemma gives us an algorithm to compute $\Ex^{\vec{m}}[\htime]$ from any given $\vec{m}$.
 
@@ -327,7 +350,7 @@ in our analysis of \Cref{alg:simple}.
           \State $\Val(\vec{m}) \gets 0$, with $\vec{m} = (m_1,0,N-m_1)$
       \EndFor \label{loc:endinit}
       \For{$M = 1, \dots, N$} \Comment{Compute value of other states} \label{loc:M}
-          \For{$m_2 = 1, \dots, M$}
+          \For{$m_2 = M, \dots, 1$}
               \State $\vec{m} \gets (M - m_2,m_2,N-M)$ \label{loc:m}
               \State $\Val(\vec{m}) \gets 1$ \label{loc:initval}
               \For{$n_3 = m_3, \dots, m_2+m_3$}
@@ -530,7 +553,7 @@ and thus
 By taking the limit $h\rightarrow{0}$ in \eqref{eq:cauchy}, the relation $dS/dt =  -\beta SI$ is retrieved. A similar treatment can be repeated for equations \eqref{eq:esperanzaI} and \eqref{eq:esperanzaR}, and we can conclude that the system \eqref{eq:esperanzaS}-\eqref{eq:esperanzaR} solves the deterministic $SIR$ when $h\rightarrow{0}$. This result comes as no surprise, since our Markovian SIR model builds on top of relation \eqref{eq:expectedinS}, when addressing $\vec{S}_{t+h}$ as an expected value.
 
 \section*{Acknowledgments}
-We would like to thank Kasper Engelen for proof-reading the article and the code of our implementation.
+We would like to thank Niel Hens for very useful feedback on early version of this work and Kasper Engelen for proof-reading the article and the code of our implementation.
 Financial support for this work was provided by the Flemish inter-university (iBOF) ``DESCARTES'' project.
 
 
